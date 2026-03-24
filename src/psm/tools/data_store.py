@@ -16,6 +16,7 @@ from psm.schemas.problem import CatalogEntry
 from psm.schemas.pattern import Pattern, ThemeSummary
 from psm.schemas.hypothesis import Hypothesis
 from psm.schemas.solution import SolutionMapping, SolverOutput
+from psm.schemas.agent import AgentNewHire, SkillOutput
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -99,6 +100,33 @@ class DataStore:
         existing = self.read_solver_outputs()
         existing.append(output)
         self._write_list(settings.data_dir / "solver_outputs.json", existing)
+
+    # --- Agent New Hires (Tier 2) ---
+
+    def read_new_hires(self) -> list[AgentNewHire]:
+        path = settings.data_dir / "new_hires.json"
+        return self._read_list(path, AgentNewHire)
+
+    def write_new_hires(self, agents: list[AgentNewHire]) -> int:
+        path = settings.data_dir / "new_hires.json"
+        self._write_list(path, agents)
+        return len(agents)
+
+    # --- Skill Outputs (Tier 3 deliverables) ---
+
+    def read_skill_outputs(self) -> list[SkillOutput]:
+        path = settings.data_dir / "skill_outputs.json"
+        return self._read_list(path, SkillOutput)
+
+    def write_skill_outputs(self, outputs: list[SkillOutput]) -> int:
+        path = settings.data_dir / "skill_outputs.json"
+        self._write_list(path, outputs)
+        return len(outputs)
+
+    def append_skill_output(self, output: SkillOutput) -> None:
+        existing = self.read_skill_outputs()
+        existing.append(output)
+        self._write_list(settings.data_dir / "skill_outputs.json", existing)
 
 
 # Module-level singleton

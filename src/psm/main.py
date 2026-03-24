@@ -30,6 +30,9 @@ def cmd_inspect(args: argparse.Namespace) -> None:
         "patterns": settings.patterns_path,
         "themes": settings.patterns_path.with_name("themes.json"),
         "hypotheses": settings.hypotheses_path,
+        "new-hires": settings.data_dir / "new_hires.json",
+        "skills": settings.data_dir / "skill_outputs.json",
+        # Legacy compat
         "solutions": settings.solution_map_path,
         "outputs": settings.data_dir / "solver_outputs.json",
     }
@@ -56,8 +59,8 @@ def cmd_status(args: argparse.Namespace) -> None:
         "patterns.json": settings.patterns_path,
         "themes.json": settings.patterns_path.with_name("themes.json"),
         "hypotheses.json": settings.hypotheses_path,
-        "solution_map.json": settings.solution_map_path,
-        "solver_outputs.json": settings.data_dir / "solver_outputs.json",
+        "new_hires.json": settings.data_dir / "new_hires.json",
+        "skill_outputs.json": settings.data_dir / "skill_outputs.json",
     }
 
     print("Pipeline Status:")
@@ -85,19 +88,19 @@ def cli() -> None:
     run_parser = sub.add_parser("run", help="Run the pipeline")
     run_parser.add_argument(
         "--stage",
-        choices=["catalog", "patterns", "hypotheses", "routes", "solve"],
+        choices=["catalog", "patterns", "hypotheses", "hire", "execute"],
         default=None,
         help="Stop after this stage (default: run all)",
     )
     run_parser.add_argument(
         "--model",
         default="claude-sonnet-4-20250514",
-        help="Model for analytical agents",
+        help="Model for Tier 1 engine agents",
     )
     run_parser.add_argument(
         "--solver-model",
-        default="claude-haiku-4-5-20251001",
-        help="Model for solver agents",
+        default="claude-sonnet-4-20250514",
+        help="Model for Tier 2 new hire skill execution",
     )
     run_parser.set_defaults(func=cmd_run)
 
@@ -105,7 +108,7 @@ def cli() -> None:
     inspect_parser = sub.add_parser("inspect", help="View pipeline data")
     inspect_parser.add_argument(
         "target",
-        choices=["catalog", "patterns", "themes", "hypotheses", "solutions", "outputs"],
+        choices=["catalog", "patterns", "themes", "hypotheses", "new-hires", "skills"],
     )
     inspect_parser.set_defaults(func=cmd_inspect)
 

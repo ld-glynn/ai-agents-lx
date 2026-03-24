@@ -2,8 +2,13 @@ from __future__ import annotations
 
 """Orchestrator — the New Hire.
 
-Coordinates the full pipeline: CSV → Catalog → Patterns → Hypotheses → Routes → Solve.
+Coordinates the full pipeline: CSV → Catalog → Patterns → Hypotheses → Hire → Execute Skills.
 Each stage runs sequentially. Outputs are persisted to JSON between stages.
+
+Three-tier agent model:
+  Tier 1: Engine agents (Cataloger, Pattern Analyzer, Hypothesis Gen, Hiring Manager)
+  Tier 2: Agent New Hires (created by Hiring Manager, one per pattern)
+  Tier 3: Skills (executed by New Hires to produce deliverables)
 """
 
 import sys
@@ -13,8 +18,8 @@ from psm.tools.data_store import store
 from psm.agents.cataloger import run_cataloger
 from psm.agents.pattern_analyzer import run_pattern_analyzer
 from psm.agents.hypothesis_gen import run_hypothesis_generator
-from psm.agents.solver_router import run_solver_router
-from psm.agents.solvers.base import run_solver
+from psm.agents.hiring_manager import run_hiring_manager
+from psm.agents.solvers.base import run_skill
 
 
 def _log(msg: str) -> None:
@@ -24,15 +29,15 @@ def _log(msg: str) -> None:
 def run_pipeline(
     stage: str | None = None,
     model: str = "claude-sonnet-4-20250514",
-    solver_model: str = "claude-haiku-4-5-20251001",
+    solver_model: str = "claude-sonnet-4-20250514",
 ) -> dict:
     """Run the full PSM pipeline (or up to a specific stage).
 
     Args:
         stage: Stop after this stage. None = run all.
-               Options: "catalog", "patterns", "hypotheses", "routes", "solve"
-        model: Model for analytical agents.
-        solver_model: Model for solver agents (cheaper).
+               Options: "catalog", "patterns", "hypotheses", "hire", "execute"
+        model: Model for Tier 1 engine agents.
+        solver_model: Model override for Tier 2 new hires executing skills.
 
     Returns:
         Summary dict with counts and key findings.
@@ -57,7 +62,7 @@ def run_pipeline(
 
     # --- Stage 2: Patterns ---
     _log("Stage 2: Analyzing patterns...")
-    catalog = store.read_catalog()  # re-read to ensure we have the persisted version
+    catalog = store.read_catalog()
     patterns, themes = run_pattern_analyzer(catalog, model=model)
     result = store.write_patterns(patterns, themes)
     _log(f"  Found {result['patterns']} patterns in {result['themes']} themes")
@@ -81,47 +86,51 @@ def run_pipeline(
     if stage == "hypotheses":
         return summary
 
-    # --- Stage 4: Route ---
-    _log("Stage 4: Routing to solvers...")
+    # --- Stage 4: Hire ---
+    _log("Stage 4: Hiring Agent New Hires...")
+    patterns = store.read_patterns()
     hypotheses = store.read_hypotheses()
-    mappings = run_solver_router(hypotheses, model=model)
-    count = store.write_solution_map(mappings)
-    _log(f"  Created {count} solution mappings")
-    summary["mapping_count"] = count
-    summary["stages_completed"].append("routes")
+    new_hires = run_hiring_manager(patterns, hypotheses, model=model)
+    count = store.write_new_hires(new_hires)
+    _log(f"  Hired {count} specialist agents:")
+    for agent in new_hires:
+        _log(f"    {agent.agent_id}: {agent.name} ({len(agent.skills)} skills)")
+    summary["new_hire_count"] = count
+    summary["stages_completed"].append("hire")
 
-    if stage == "routes":
+    if stage == "hire":
         return summary
 
-    # --- Stage 5: Solve ---
-    _log("Stage 5: Running solver agents...")
-    mappings = store.read_solution_map()
+    # --- Stage 5: Execute Skills ---
+    _log("Stage 5: New Hires executing skills...")
+    new_hires = store.read_new_hires()
     hypotheses = store.read_hypotheses()
     patterns = store.read_patterns()
 
-    # Build lookup dicts
     hyp_by_id = {h.hypothesis_id: h for h in hypotheses}
     pat_by_id = {p.pattern_id: p for p in patterns}
 
     outputs = []
-    for mapping in mappings:
-        hyp = hyp_by_id.get(mapping.hypothesis_id)
-        if not hyp:
-            _log(f"  WARNING: Hypothesis {mapping.hypothesis_id} not found, skipping")
-            continue
-
-        pat = pat_by_id.get(hyp.pattern_id)
+    for agent in new_hires:
+        pat = pat_by_id.get(agent.pattern_id)
         if not pat:
-            _log(f"  WARNING: Pattern {hyp.pattern_id} not found, skipping")
+            _log(f"  WARNING: Pattern {agent.pattern_id} not found for {agent.name}, skipping")
             continue
 
-        _log(f"  Solving {mapping.mapping_id} ({mapping.solver_type.value})...")
-        output = run_solver(mapping, hyp, pat, model=solver_model)
-        outputs.append(output)
+        _log(f"  {agent.name} executing {len(agent.skills)} skills...")
+        for skill in sorted(agent.skills, key=lambda s: s.priority):
+            hyp = hyp_by_id.get(skill.hypothesis_id)
+            if not hyp:
+                _log(f"    WARNING: Hypothesis {skill.hypothesis_id} not found, skipping")
+                continue
 
-    store.write_solver_outputs(outputs)
+            _log(f"    Using skill: {skill.skill_type.value} for {skill.hypothesis_id}")
+            output = run_skill(agent, skill, hyp, pat, model=solver_model)
+            outputs.append(output)
+
+    store.write_skill_outputs(outputs)
     _log(f"  Produced {len(outputs)} deliverables")
-    summary["solver_output_count"] = len(outputs)
-    summary["stages_completed"].append("solve")
+    summary["skill_output_count"] = len(outputs)
+    summary["stages_completed"].append("execute")
 
     return summary
