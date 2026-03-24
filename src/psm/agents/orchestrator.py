@@ -20,6 +20,7 @@ from psm.agents.pattern_analyzer import run_pattern_analyzer
 from psm.agents.hypothesis_gen import run_hypothesis_generator
 from psm.agents.hiring_manager import run_hiring_manager
 from psm.agents.solvers.base import run_skill
+from psm.eval.gate import screen_candidate
 
 
 def _log(msg: str) -> None:
@@ -86,23 +87,48 @@ def run_pipeline(
     if stage == "hypotheses":
         return summary
 
-    # --- Stage 4: Hire ---
+    # --- Stage 4: Hire + Screen ---
     _log("Stage 4: Hiring Agent New Hires...")
     patterns = store.read_patterns()
     hypotheses = store.read_hypotheses()
-    new_hires = run_hiring_manager(patterns, hypotheses, model=model)
-    count = store.write_new_hires(new_hires)
-    _log(f"  Hired {count} specialist agents:")
-    for agent in new_hires:
+    candidates = run_hiring_manager(patterns, hypotheses, model=model)
+    _log(f"  Hiring Manager proposed {len(candidates)} candidates")
+
+    pat_by_id = {p.pattern_id: p for p in patterns}
+
+    # Screen each candidate before adding to roster
+    qualified = []
+    rejected = []
+    for candidate in candidates:
+        pat = pat_by_id.get(candidate.pattern_id)
+        if not pat:
+            _log(f"  WARNING: Pattern {candidate.pattern_id} not found for {candidate.name}, skipping")
+            rejected.append(candidate)
+            continue
+
+        gate_result = screen_candidate(
+            candidate, hypotheses, pat, model=solver_model
+        )
+        if gate_result.passed:
+            qualified.append(candidate)
+        else:
+            rejected.append(candidate)
+            _log(f"  REJECTED {candidate.name}: {gate_result.reason}")
+
+    count = store.write_new_hires(qualified)
+    _log(f"  Hired {len(qualified)} agents ({len(rejected)} rejected):")
+    for agent in qualified:
         _log(f"    {agent.agent_id}: {agent.name} ({len(agent.skills)} skills)")
     summary["new_hire_count"] = count
+    summary["candidates_proposed"] = len(candidates)
+    summary["candidates_rejected"] = len(rejected)
     summary["stages_completed"].append("hire")
 
     if stage == "hire":
         return summary
 
-    # --- Stage 5: Execute Skills ---
-    _log("Stage 5: New Hires executing skills...")
+    # --- Stage 5: Execute Skills (qualified agents only) ---
+    _log("Stage 5: Qualified New Hires executing skills...")
     new_hires = store.read_new_hires()
     hypotheses = store.read_hypotheses()
     patterns = store.read_patterns()

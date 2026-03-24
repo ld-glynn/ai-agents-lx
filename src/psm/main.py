@@ -51,6 +51,52 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     print(json.dumps(data, indent=2, default=str))
 
 
+def cmd_eval(args: argparse.Namespace) -> None:
+    """Run evaluation on existing Agent New Hires."""
+    from psm.tools.data_store import store
+    from psm.eval.gate import screen_candidate, evaluate_gold
+
+    new_hires = store.read_new_hires()
+    hypotheses = store.read_hypotheses()
+    patterns = store.read_patterns()
+    pat_by_id = {p.pattern_id: p for p in patterns}
+
+    if not new_hires:
+        print("No Agent New Hires found. Run 'psm run --stage hire' first.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Evaluating {len(new_hires)} agents ({args.stage} stage)...")
+    print("=" * 60)
+
+    results = []
+    for agent in new_hires:
+        pat = pat_by_id.get(agent.pattern_id)
+        if not pat:
+            print(f"SKIP {agent.name}: pattern {agent.pattern_id} not found", file=sys.stderr)
+            continue
+
+        if args.stage == "gold":
+            result = evaluate_gold(agent, hypotheses, pat, model=args.model)
+        else:
+            result = screen_candidate(agent, hypotheses, pat, model=args.model)
+        results.append(result)
+
+    print("\n" + "=" * 60)
+    print("EVALUATION RESULTS")
+    print("=" * 60)
+    passed = sum(1 for r in results if r.passed)
+    total = len(results)
+    print(f"Stage: {args.stage}")
+    print(f"Passed: {passed}/{total}")
+    print()
+    for r in results:
+        status = "PASS" if r.passed else "FAIL"
+        print(f"  [{status}] {r.agent_name} — {r.reason}")
+        if r.eval_run.failure_summary:
+            for code, count in r.eval_run.failure_summary.items():
+                print(f"         {code}: {count}")
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     """Show pipeline status — which stages have data."""
     files = {
@@ -111,6 +157,21 @@ def cli() -> None:
         choices=["catalog", "patterns", "themes", "hypotheses", "new-hires", "skills"],
     )
     inspect_parser.set_defaults(func=cmd_inspect)
+
+    # psm eval
+    eval_parser = sub.add_parser("eval", help="Evaluate Agent New Hires")
+    eval_parser.add_argument(
+        "--stage",
+        choices=["screening", "gold"],
+        default="screening",
+        help="Evaluation stage (default: screening)",
+    )
+    eval_parser.add_argument(
+        "--model",
+        default="claude-sonnet-4-20250514",
+        help="Model for evaluation runs",
+    )
+    eval_parser.set_defaults(func=cmd_eval)
 
     # psm status
     status_parser = sub.add_parser("status", help="Show pipeline status")
