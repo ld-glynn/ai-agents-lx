@@ -1,0 +1,11 @@
+id,title,description,reported_by,date_reported,domain,tags
+P-001,Onboarding takes too long,New engineers take 3-4 weeks before they can ship their first PR. Documentation is scattered across Notion Confluence and tribal knowledge.,Alex Chen,2025-12-01,knowledge,onboarding slow documentation
+P-002,Deploy pipeline is flaky,CI/CD fails about 20% of the time with intermittent timeout errors. Teams retry and waste time waiting.,Maria Santos,2025-12-03,infrastructure,ci_cd flaky deploys
+P-003,Customer feedback never reaches engineering,Product and support teams collect feedback but there is no systematic way it gets to the engineering team. We find out about pain points months later.,Jordan Lee,2025-12-05,communication,feedback silos customer
+P-004,Too many meetings no decisions,We have 6+ recurring meetings per week but decisions are rarely documented or followed up on. People leave meetings unclear on next steps.,Sam Patel,2025-12-08,process,meetings decision_making
+P-005,No visibility into what other teams are working on,Each squad works in isolation. We frequently discover duplicated effort or conflicting priorities too late.,Robin Taylor,2025-12-10,communication,silos visibility alignment
+P-006,Incident response is ad hoc,When production issues happen there is no runbook and no clear escalation path. The person who happens to notice the alert figures it out alone.,Alex Chen,2025-12-12,process,incidents on_call reliability
+P-007,Knowledge lost when people leave,When someone leaves the company critical context about systems and decisions disappears. No handoff process exists.,Jordan Lee,2025-12-15,knowledge,retention documentation
+P-008,Sprint planning is guesswork,We estimate stories based on gut feel. Velocity is unpredictable and we regularly miss sprint goals by 30-40%.,Maria Santos,2025-12-18,process,estimation planning sprints
+P-009,Support tickets pile up with no owner,Tier 2 support tickets that require engineering input sit in a queue with no clear triage process. Average response time is 5 days.,Sam Patel,2025-12-20,customer,support triage response_time
+P-010,No shared understanding of technical debt,Everyone agrees we have tech debt but there is no inventory prioritization or dedicated time to address it. It keeps growing.,Robin Taylor,2025-12-22,strategy,tech_debt prioritization
