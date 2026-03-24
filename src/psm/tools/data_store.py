@@ -17,6 +17,7 @@ from psm.schemas.pattern import Pattern, ThemeSummary
 from psm.schemas.hypothesis import Hypothesis
 from psm.schemas.solution import SolutionMapping, SolverOutput
 from psm.schemas.agent import AgentNewHire, SkillOutput
+from psm.schemas.ingestion import IngestionRecord, IngestionSyncStatus
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -127,6 +128,30 @@ class DataStore:
         existing = self.read_skill_outputs()
         existing.append(output)
         self._write_list(settings.data_dir / "skill_outputs.json", existing)
+
+    # --- Ingestion Records ---
+
+    def read_ingestion(self) -> list[IngestionRecord]:
+        return self._read_list(settings.ingestion_path, IngestionRecord)
+
+    def write_ingestion(self, records: list[IngestionRecord]) -> int:
+        self._write_list(settings.ingestion_path, records)
+        return len(records)
+
+    def append_ingestion(self, records: list[IngestionRecord]) -> int:
+        existing = self.read_ingestion()
+        existing_ids = {r.record_id for r in existing}
+        new = [r for r in records if r.record_id not in existing_ids]
+        self._write_list(settings.ingestion_path, existing + new)
+        return len(new)
+
+    # --- Sync Status ---
+
+    def read_sync_status(self) -> list[IngestionSyncStatus]:
+        return self._read_list(settings.sync_status_path, IngestionSyncStatus)
+
+    def write_sync_status(self, statuses: list[IngestionSyncStatus]) -> None:
+        self._write_list(settings.sync_status_path, statuses)
 
 
 # Module-level singleton

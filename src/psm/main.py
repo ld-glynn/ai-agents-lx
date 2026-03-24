@@ -15,6 +15,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         stage=args.stage,
         model=args.model,
         solver_model=args.solver_model,
+        with_integrations=args.with_integrations,
     )
 
     print("\n" + "=" * 60)
@@ -97,6 +98,65 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 print(f"         {code}: {count}")
 
 
+def cmd_sync(args: argparse.Namespace) -> None:
+    """Sync integration sources and run structurer."""
+    from psm.integrations import get_adapter, get_all_adapters
+    from psm.agents.structurer import structure_records
+    from psm.tools.data_store import store
+    from datetime import datetime
+
+    sources = args.source
+    mock = args.mock
+
+    if sources == "all":
+        adapters = get_all_adapters(mock=mock)
+    else:
+        adapters = [get_adapter(sources, mock=mock)]
+
+    all_records = []
+    for adapter in adapters:
+        print(f"Syncing {adapter.source_type.value}...")
+        records = adapter.fetch_records()
+        print(f"  Fetched {len(records)} records")
+        all_records.extend(records)
+
+        status = adapter.get_status()
+        status.last_sync_at = datetime.now()
+        status.record_count = len(records)
+
+    if all_records:
+        new_count = store.append_ingestion(all_records)
+        print(f"\nPersisted {new_count} new ingestion records")
+
+        print("Running Structurer agent...")
+        problems = structure_records(all_records, model=args.model)
+        print(f"Extracted {len(problems)} problems")
+
+        for p in problems:
+            print(f"  {p.id}: {p.title}")
+    else:
+        print("No records fetched.")
+
+
+def cmd_integrations(args: argparse.Namespace) -> None:
+    """Show integration source status."""
+    from psm.tools.data_store import store
+    from psm.integrations import get_all_adapters
+
+    adapters = get_all_adapters(mock=True)
+    ingestion = store.read_ingestion()
+
+    print("Integration Sources:")
+    print("-" * 50)
+    for adapter in adapters:
+        source = adapter.source_type.value
+        count = sum(1 for r in ingestion if r.source.value == source)
+        status = adapter.get_status()
+        print(f"  {source:12s}  status: {status.status:12s}  records: {count}")
+
+    print(f"\nTotal ingestion records: {len(ingestion)}")
+
+
 def cmd_status(args: argparse.Namespace) -> None:
     """Show pipeline status — which stages have data."""
     files = {
@@ -107,6 +167,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         "hypotheses.json": settings.hypotheses_path,
         "new_hires.json": settings.data_dir / "new_hires.json",
         "skill_outputs.json": settings.data_dir / "skill_outputs.json",
+        "ingestion.json": settings.ingestion_path,
     }
 
     print("Pipeline Status:")
@@ -148,6 +209,12 @@ def cli() -> None:
         default="claude-sonnet-4-20250514",
         help="Model for Tier 2 new hire skill execution",
     )
+    run_parser.add_argument(
+        "--with-integrations",
+        action="store_true",
+        default=False,
+        help="Run Stage 0: sync integration sources before pipeline",
+    )
     run_parser.set_defaults(func=cmd_run)
 
     # psm inspect
@@ -172,6 +239,33 @@ def cli() -> None:
         help="Model for evaluation runs",
     )
     eval_parser.set_defaults(func=cmd_eval)
+
+    # psm sync
+    sync_parser = sub.add_parser("sync", help="Sync integration sources")
+    sync_parser.add_argument(
+        "--source",
+        choices=["salesforce", "gong", "slack", "all"],
+        default="all",
+        help="Source to sync (default: all)",
+    )
+    sync_parser.add_argument(
+        "--mock", action="store_true", default=True,
+        help="Use mock data (default: True)",
+    )
+    sync_parser.add_argument(
+        "--no-mock", action="store_false", dest="mock",
+        help="Use live API connections",
+    )
+    sync_parser.add_argument(
+        "--model",
+        default="claude-sonnet-4-20250514",
+        help="Model for structurer agent",
+    )
+    sync_parser.set_defaults(func=cmd_sync)
+
+    # psm integrations
+    int_parser = sub.add_parser("integrations", help="Show integration status")
+    int_parser.set_defaults(func=cmd_integrations)
 
     # psm status
     status_parser = sub.add_parser("status", help="Show pipeline status")

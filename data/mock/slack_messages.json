@@ -1,0 +1,44 @@
+[
+  {
+    "channel": "#engineering-general",
+    "user": "Sarah Chen",
+    "text": "PSA: if you're seeing intermittent 503s from the auth service, we know about it. The connection pool is exhausting under load. Workaround: restart your local instance. Permanent fix is in the backlog but no ETA. This has been happening for 3 weeks now.",
+    "thread_replies": 12,
+    "timestamp": "2026-02-14T10:30:00Z"
+  },
+  {
+    "channel": "#customer-feedback",
+    "user": "Mike Torres",
+    "text": "Just got off a call with our second-largest account. They're threatening to churn because response times on support tickets have gone from 4 hours to 2 days. We don't have enough support engineers and the knowledge base is so outdated that new support hires can't self-serve answers.",
+    "thread_replies": 8,
+    "timestamp": "2026-02-19T16:45:00Z"
+  },
+  {
+    "channel": "#product-feedback",
+    "user": "Lisa Park",
+    "text": "Compiled Q1 customer feedback from Gong calls. Top 3 themes: (1) API docs are wrong/missing - mentioned in 40% of calls, (2) pricing model doesn't fit non-SaaS use cases, (3) implementation takes too long vs competitors. I've been sharing these monthly but engineering says they never see them. Where is the disconnect?",
+    "thread_replies": 15,
+    "timestamp": "2026-02-25T09:00:00Z"
+  },
+  {
+    "channel": "#incidents",
+    "user": "On-Call Bot",
+    "text": "INCIDENT: Production database failover triggered. Primary DB CPU at 100% for 15 minutes. Automatic failover to replica succeeded but 2 minutes of write errors occurred. Root cause: unoptimized query from the new reporting feature deployed yesterday. No load testing was done before deploy.",
+    "thread_replies": 23,
+    "timestamp": "2026-03-01T03:22:00Z"
+  },
+  {
+    "channel": "#engineering-general",
+    "user": "New Hire (Week 2)",
+    "text": "Hey team, I've been trying to get the integration test suite running locally for 3 days now. The README says to use Docker Compose but the compose file references images that don't exist anymore. I asked in #help but got conflicting answers. Is there an up-to-date guide somewhere? Starting to feel like I'm wasting everyone's time asking basic questions.",
+    "thread_replies": 6,
+    "timestamp": "2026-03-07T11:15:00Z"
+  },
+  {
+    "channel": "#sales",
+    "user": "Alex Kim",
+    "text": "Lost another deal today. Prospect asked for a SOC2 report and we couldn't produce one. Also asked about our SLA guarantees and I had to say 'we don't have formal SLAs documented.' These are table-stakes requirements for enterprise deals. How many deals do we need to lose before we invest in compliance?",
+    "thread_replies": 18,
+    "timestamp": "2026-03-12T17:30:00Z"
+  }
+]

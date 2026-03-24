@@ -1,0 +1,47 @@
+[
+  {
+    "call_id": "GONG-8821",
+    "title": "Quarterly Business Review - TechStart Inc",
+    "participants": ["Sarah Chen (AE)", "Mike Torres (CS)", "Li Wei (TechStart CTO)"],
+    "transcript_excerpt": "Li Wei: Honestly, the biggest pain point is your API documentation. Every time we try to integrate a new endpoint, we find the docs are either wrong or missing. My team spent two weeks on what should have been a one-day integration. Sarah: I hear you, and I know this has come up before... Li Wei: It has, and nothing has changed. We're evaluating alternatives if this doesn't improve by next quarter.",
+    "date": "2026-02-12T10:00:00Z",
+    "duration_minutes": 45,
+    "sentiment": "negative"
+  },
+  {
+    "call_id": "GONG-8845",
+    "title": "Discovery Call - Globex Manufacturing",
+    "participants": ["Alex Kim (AE)", "Dana Brown (Globex VP Ops)"],
+    "transcript_excerpt": "Dana: We looked at your pricing page but honestly the tiers don't make sense for manufacturing. You have per-seat pricing but we need per-facility. Alex: That's great feedback, let me take that back... Dana: Your competitor already offers facility-based pricing. We need an answer this week or we're going with them.",
+    "date": "2026-02-20T15:30:00Z",
+    "duration_minutes": 30,
+    "sentiment": "neutral"
+  },
+  {
+    "call_id": "GONG-8867",
+    "title": "Support Escalation Review - DataFlow Labs",
+    "participants": ["Mike Torres (CS)", "Priya Sharma (Support Lead)", "James Liu (DataFlow Eng Lead)"],
+    "transcript_excerpt": "James: This is the fifth P1 ticket we've filed about the same issue. Your webhook delivery is unreliable — we're seeing 15% message loss during peak hours. Priya: We've patched this twice but the fix isn't holding. Mike: James, I understand your frustration. Let me get engineering leadership involved directly.",
+    "date": "2026-02-28T11:00:00Z",
+    "duration_minutes": 35,
+    "sentiment": "negative"
+  },
+  {
+    "call_id": "GONG-8891",
+    "title": "Team Standup Recording - Platform Team",
+    "participants": ["Sarah Chen (Eng Lead)", "4 engineers"],
+    "transcript_excerpt": "Sarah: Sprint velocity is down 30% this month. Half our points are going to unplanned work — incident response, debugging flaky tests, answering questions from other teams because nothing is documented. Engineer 1: I spent all of yesterday helping the new hire figure out how to run the test suite locally. There's no guide for it. Sarah: That's exactly the problem. We're losing productive time to tribal knowledge transfer.",
+    "date": "2026-03-05T09:15:00Z",
+    "duration_minutes": 15,
+    "sentiment": "negative"
+  },
+  {
+    "call_id": "GONG-8912",
+    "title": "Win/Loss Analysis - Lost Deal Review",
+    "participants": ["Alex Kim (AE)", "VP Sales", "Product Lead"],
+    "transcript_excerpt": "Alex: We lost the Meridian deal to a competitor. The main reason was implementation timeline — they quoted 2 weeks, we quoted 6-8. VP Sales: Why is our implementation so much longer? Alex: Honestly, our onboarding process is manual. No self-serve setup, no automated provisioning. Every new customer needs hands-on engineering time. Product Lead: This is the third deal this quarter we've lost on implementation speed.",
+    "date": "2026-03-10T14:00:00Z",
+    "duration_minutes": 25,
+    "sentiment": "negative"
+  }
+]

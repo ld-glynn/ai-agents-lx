@@ -29,6 +29,11 @@ class Settings:
     solution_map_path: Path
     problems_csv_path: Path
 
+    # Integration paths
+    mock_data_dir: Path
+    ingestion_path: Path
+    sync_status_path: Path
+
     @classmethod
     def default(cls) -> "Settings":
         root = _find_project_root()
@@ -46,6 +51,10 @@ class Settings:
             hypotheses_path=data / "hypotheses.json",
             solution_map_path=data / "solution_map.json",
             problems_csv_path=data / "input" / "problems.csv",
+            # Integrations
+            mock_data_dir=data / "mock",
+            ingestion_path=data / "ingestion.json",
+            sync_status_path=data / "sync_status.json",
         )
 
 

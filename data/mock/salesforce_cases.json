@@ -1,0 +1,47 @@
+[
+  {
+    "case_number": "SF-10234",
+    "subject": "New engineers struggling with environment setup",
+    "description": "Multiple new hires have reported spending 2+ weeks just getting their dev environment working. Documentation is outdated and scattered across Confluence, README files, and Slack messages. Three new engineers this quarter alone have escalated to their managers about this.",
+    "account_name": "Internal",
+    "priority": "High",
+    "created_date": "2026-02-10T09:00:00Z",
+    "status": "Open"
+  },
+  {
+    "case_number": "SF-10251",
+    "subject": "Customer reporting duplicate outreach from sales and CS",
+    "description": "Acme Corp contacted us frustrated that they received a renewal pitch from sales while simultaneously discussing a support escalation with CS. This is the third time in two months a customer has flagged overlapping outreach. No shared view of customer interactions across teams.",
+    "account_name": "Acme Corp",
+    "priority": "Critical",
+    "created_date": "2026-02-18T14:30:00Z",
+    "status": "Open"
+  },
+  {
+    "case_number": "SF-10267",
+    "subject": "Repeated deploy failures blocking releases",
+    "description": "The CI/CD pipeline has failed on 6 of the last 10 deploy attempts. Flaky integration tests are the primary cause, but there are also intermittent Docker build issues. Engineering is spending ~4 hours per week debugging deploy failures instead of shipping features.",
+    "account_name": "Internal",
+    "priority": "High",
+    "created_date": "2026-02-22T11:15:00Z",
+    "status": "In Progress"
+  },
+  {
+    "case_number": "SF-10289",
+    "subject": "No runbooks for critical system failures",
+    "description": "During last week's database outage, the on-call engineer had no runbook to follow. Took 4 hours to resolve what should have been a 30-minute fix. We have zero documented runbooks for our top 5 failure modes.",
+    "account_name": "Internal",
+    "priority": "Critical",
+    "created_date": "2026-03-02T08:45:00Z",
+    "status": "Open"
+  },
+  {
+    "case_number": "SF-10301",
+    "subject": "Feature requests getting lost between product and engineering",
+    "description": "Product team logs feature requests in Productboard but engineering only checks Linear. At least 12 customer-requested features from last quarter were never prioritized because they didn't make it into the engineering backlog. No automated sync between systems.",
+    "account_name": "Internal",
+    "priority": "Medium",
+    "created_date": "2026-03-08T16:00:00Z",
+    "status": "Open"
+  }
+]

@@ -15,6 +15,7 @@ import sys
 
 from psm.tools.csv_reader import load_problems
 from psm.tools.data_store import store
+from psm.agents.structurer import structure_records
 from psm.agents.cataloger import run_cataloger
 from psm.agents.pattern_analyzer import run_pattern_analyzer
 from psm.agents.hypothesis_gen import run_hypothesis_generator
@@ -31,6 +32,7 @@ def run_pipeline(
     stage: str | None = None,
     model: str = "claude-sonnet-4-20250514",
     solver_model: str = "claude-sonnet-4-20250514",
+    with_integrations: bool = False,
 ) -> dict:
     """Run the full PSM pipeline (or up to a specific stage).
 
@@ -45,9 +47,44 @@ def run_pipeline(
     """
     summary: dict = {"stages_completed": []}
 
+    # --- Stage 0: Sync & Structure (optional) ---
+    integration_problems = []
+    if with_integrations:
+        _log("Stage 0: Syncing integration sources...")
+        from psm.integrations import get_all_adapters
+        from datetime import datetime
+
+        adapters = get_all_adapters(mock=True)
+        all_records = []
+        for adapter in adapters:
+            records = adapter.fetch_records()
+            _log(f"  {adapter.source_type.value}: fetched {len(records)} records")
+            all_records.extend(records)
+
+            # Update sync status
+            status = adapter.get_status()
+            status.last_sync_at = datetime.now()
+            status.record_count = len(records)
+            store.write_sync_status([status])
+
+        if all_records:
+            new_count = store.append_ingestion(all_records)
+            _log(f"  Persisted {new_count} new ingestion records")
+
+            _log("  Running Structurer agent...")
+            integration_problems = structure_records(all_records, model=model)
+            _log(f"  Extracted {len(integration_problems)} problems from integrations")
+
+        summary["ingestion_count"] = len(all_records)
+        summary["integration_problems"] = len(integration_problems)
+        summary["stages_completed"].append("sync")
+
     # --- Stage 1: Catalog ---
     _log("Stage 1: Loading problems from CSV...")
     raw_problems = load_problems()
+    # Merge integration-sourced problems
+    if integration_problems:
+        raw_problems.extend(integration_problems)
     _log(f"  Loaded {len(raw_problems)} raw problems")
 
     _log("  Running Cataloger agent...")
