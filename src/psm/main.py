@@ -16,6 +16,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         model=args.model,
         solver_model=args.solver_model,
         with_integrations=args.with_integrations,
+        skip_solvability=args.skip_solvability,
     )
 
     print("\n" + "=" * 60)
@@ -33,6 +34,8 @@ def cmd_inspect(args: argparse.Namespace) -> None:
         "hypotheses": settings.hypotheses_path,
         "new-hires": settings.data_dir / "new_hires.json",
         "skills": settings.data_dir / "skill_outputs.json",
+        "solvability": settings.solvability_path,
+        "outcomes": settings.outcomes_log_path,
         # Legacy compat
         "solutions": settings.solution_map_path,
         "outputs": settings.data_dir / "solver_outputs.json",
@@ -96,6 +99,67 @@ def cmd_eval(args: argparse.Namespace) -> None:
         if r.eval_run.failure_summary:
             for code, count in r.eval_run.failure_summary.items():
                 print(f"         {code}: {count}")
+
+
+def cmd_eval_solvability(args: argparse.Namespace) -> None:
+    """Run solvability evaluation on existing patterns."""
+    from psm.tools.data_store import store
+    from psm.agents.solvability_evaluator import run_solvability_evaluator
+
+    patterns = store.read_patterns()
+    if not patterns:
+        print("No patterns found. Run 'psm run --stage patterns' first.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Evaluating solvability of {len(patterns)} patterns...")
+    print("=" * 60)
+
+    report = run_solvability_evaluator(patterns, model=args.model)
+    store.write_solvability(report)
+
+    print(f"\nTotal: {report.total_patterns}")
+    print(f"  Pass:    {report.passed}")
+    print(f"  Flag:    {report.flagged}")
+    print(f"  Drop:    {report.dropped}")
+    print()
+    for r in report.results:
+        icon = {"pass": "PASS", "flag": "FLAG", "drop": "DROP"}[r.status.value]
+        print(f"  [{icon}] {r.pattern_id} (conf: {r.confidence:.0%}) — {r.reason}")
+
+
+def cmd_record_outcome(args: argparse.Namespace) -> None:
+    """Record an outcome for a hypothesis."""
+    from psm.tools.data_store import store
+    from psm.schemas.solvability import OutcomeEntry
+
+    hypotheses = store.read_hypotheses()
+    hyp = next((h for h in hypotheses if h.hypothesis_id == args.hypothesis_id), None)
+    if not hyp:
+        print(f"Hypothesis not found: {args.hypothesis_id}", file=sys.stderr)
+        sys.exit(1)
+
+    # Get solvability score if available
+    solvability = store.read_solvability()
+    score = 0.5
+    if solvability:
+        result = next((r for r in solvability.results if r.pattern_id == hyp.pattern_id), None)
+        if result:
+            score = result.confidence
+
+    # Get domain from pattern
+    patterns = store.read_patterns()
+    pat = next((p for p in patterns if p.pattern_id == hyp.pattern_id), None)
+    domain = pat.domains_affected[0].value if pat and pat.domains_affected else None
+
+    entry = OutcomeEntry(
+        pattern_id=hyp.pattern_id,
+        hypothesis_id=args.hypothesis_id,
+        solvability_score_at_time=score,
+        outcome=args.outcome,
+        domain=domain,
+    )
+    store.append_outcome(entry)
+    print(f"Recorded: {args.hypothesis_id} → {args.outcome} (solvability score: {score:.0%})")
 
 
 def cmd_sync(args: argparse.Namespace) -> None:
@@ -195,7 +259,7 @@ def cli() -> None:
     run_parser = sub.add_parser("run", help="Run the pipeline")
     run_parser.add_argument(
         "--stage",
-        choices=["catalog", "patterns", "hypotheses", "hire", "execute"],
+        choices=["catalog", "patterns", "solvability", "hypotheses", "hire", "execute"],
         default=None,
         help="Stop after this stage (default: run all)",
     )
@@ -215,13 +279,19 @@ def cli() -> None:
         default=False,
         help="Run Stage 0: sync integration sources before pipeline",
     )
+    run_parser.add_argument(
+        "--skip-solvability",
+        action="store_true",
+        default=False,
+        help="Skip solvability evaluation (Stage 2.5)",
+    )
     run_parser.set_defaults(func=cmd_run)
 
     # psm inspect
     inspect_parser = sub.add_parser("inspect", help="View pipeline data")
     inspect_parser.add_argument(
         "target",
-        choices=["catalog", "patterns", "themes", "hypotheses", "new-hires", "skills"],
+        choices=["catalog", "patterns", "themes", "hypotheses", "new-hires", "skills", "solvability", "outcomes"],
     )
     inspect_parser.set_defaults(func=cmd_inspect)
 
@@ -239,6 +309,17 @@ def cli() -> None:
         help="Model for evaluation runs",
     )
     eval_parser.set_defaults(func=cmd_eval)
+
+    # psm eval-solvability
+    solv_parser = sub.add_parser("eval-solvability", help="Run solvability evaluation on patterns")
+    solv_parser.add_argument("--model", default="claude-sonnet-4-20250514", help="Model for evaluator")
+    solv_parser.set_defaults(func=cmd_eval_solvability)
+
+    # psm record-outcome
+    outcome_parser = sub.add_parser("record-outcome", help="Record a hypothesis outcome")
+    outcome_parser.add_argument("hypothesis_id", help="Hypothesis ID (e.g. HYP-001)")
+    outcome_parser.add_argument("outcome", choices=["validated", "invalidated"], help="Outcome")
+    outcome_parser.set_defaults(func=cmd_record_outcome)
 
     # psm sync
     sync_parser = sub.add_parser("sync", help="Sync integration sources")

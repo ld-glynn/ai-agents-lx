@@ -16,6 +16,13 @@ class EffortEstimate(str, Enum):
     HIGH = "high"
 
 
+class OutcomeStatus(str, Enum):
+    UNTESTED = "untested"
+    TESTING = "testing"
+    VALIDATED = "validated"
+    INVALIDATED = "invalidated"
+
+
 class Hypothesis(BaseModel):
     """A testable solution hypothesis linked to a pattern.
 
@@ -42,3 +49,4 @@ class Hypothesis(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     test_criteria: list[str] = Field(min_length=1)  # must be testable
     risks: list[str] = Field(default_factory=list)
+    outcome_status: OutcomeStatus = OutcomeStatus.UNTESTED

@@ -18,6 +18,7 @@ from psm.tools.data_store import store
 from psm.agents.structurer import structure_records
 from psm.agents.cataloger import run_cataloger
 from psm.agents.pattern_analyzer import run_pattern_analyzer
+from psm.agents.solvability_evaluator import run_solvability_evaluator
 from psm.agents.hypothesis_gen import run_hypothesis_generator
 from psm.agents.hiring_manager import run_hiring_manager
 from psm.agents.solvers.base import run_skill
@@ -33,6 +34,7 @@ def run_pipeline(
     model: str = "claude-sonnet-4-20250514",
     solver_model: str = "claude-sonnet-4-20250514",
     with_integrations: bool = False,
+    skip_solvability: bool = False,
 ) -> dict:
     """Run the full PSM pipeline (or up to a specific stage).
 
@@ -111,9 +113,32 @@ def run_pipeline(
     if stage == "patterns":
         return summary
 
+    # --- Stage 2.5: Solvability Evaluation (optional) ---
+    if not skip_solvability:
+        _log("Stage 2.5: Evaluating pattern solvability...")
+        patterns = store.read_patterns()
+        report = run_solvability_evaluator(patterns, model=model)
+        store.write_solvability(report)
+        _log(f"  Results: {report.passed} pass, {report.flagged} flagged, {report.dropped} dropped")
+        summary["solvability_passed"] = report.passed
+        summary["solvability_flagged"] = report.flagged
+        summary["solvability_dropped"] = report.dropped
+        summary["stages_completed"].append("solvability")
+
+        # Filter: only pass patterns proceed. Flagged are held, dropped are excluded.
+        passed_ids = {r.pattern_id for r in report.results if r.status.value == "pass"}
+        patterns = [p for p in patterns if p.pattern_id in passed_ids]
+        _log(f"  {len(patterns)} patterns proceeding to hypothesis generation")
+
+        if stage == "solvability":
+            return summary
+    else:
+        _log("Stage 2.5: Solvability evaluation skipped (--skip-solvability)")
+
     # --- Stage 3: Hypotheses ---
     _log("Stage 3: Generating hypotheses...")
-    patterns = store.read_patterns()
+    if skip_solvability:
+        patterns = store.read_patterns()
     themes = store.read_themes()
     hypotheses = run_hypothesis_generator(patterns, themes, model=model)
     count = store.write_hypotheses(hypotheses)

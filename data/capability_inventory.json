@@ -1,0 +1,47 @@
+{
+  "agent_types": [
+    {
+      "agent_type": "domain_specialist",
+      "description": "Expert in a specific organizational domain who analyzes and resolves domain-specific challenges",
+      "domains": ["process", "tooling", "communication", "knowledge", "infrastructure", "people", "strategy", "customer"],
+      "skills": ["recommend", "action_plan", "process_doc", "investigate"]
+    },
+    {
+      "agent_type": "cross_functional_analyst",
+      "description": "Analyzes problems spanning multiple domains and proposes integrated solutions",
+      "domains": ["process", "communication", "people", "strategy"],
+      "skills": ["recommend", "action_plan", "investigate"]
+    },
+    {
+      "agent_type": "technical_architect",
+      "description": "Designs technical solutions for infrastructure and tooling problems",
+      "domains": ["infrastructure", "tooling"],
+      "skills": ["action_plan", "process_doc", "investigate"]
+    }
+  ],
+  "skill_types": [
+    {
+      "skill_type": "recommend",
+      "description": "Produce a concise recommendation with rationale, tradeoffs, and next steps",
+      "output_formats": ["structured_prose", "bullet_list"]
+    },
+    {
+      "skill_type": "action_plan",
+      "description": "Create a phased implementation plan with timelines, owners, and success metrics",
+      "output_formats": ["structured_prose", "timeline", "checklist"]
+    },
+    {
+      "skill_type": "process_doc",
+      "description": "Write operational documentation like runbooks, playbooks, or standard operating procedures",
+      "output_formats": ["structured_prose", "step_by_step", "checklist"]
+    },
+    {
+      "skill_type": "investigate",
+      "description": "Conduct a structured investigation with root cause analysis and findings",
+      "output_formats": ["structured_prose", "root_cause_tree"]
+    }
+  ],
+  "min_problems_per_pattern": 2,
+  "version": "1.0",
+  "updated_at": "2026-03-25T00:00:00Z"
+}

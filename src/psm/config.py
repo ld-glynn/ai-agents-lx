@@ -34,6 +34,11 @@ class Settings:
     ingestion_path: Path
     sync_status_path: Path
 
+    # Solvability & outcomes
+    capability_inventory_path: Path
+    solvability_path: Path
+    outcomes_log_path: Path
+
     @classmethod
     def default(cls) -> "Settings":
         root = _find_project_root()
@@ -55,6 +60,10 @@ class Settings:
             mock_data_dir=data / "mock",
             ingestion_path=data / "ingestion.json",
             sync_status_path=data / "sync_status.json",
+            # Solvability & outcomes
+            capability_inventory_path=data / "capability_inventory.json",
+            solvability_path=data / "solvability.json",
+            outcomes_log_path=data / "outcomes_log.jsonl",
         )
 
 

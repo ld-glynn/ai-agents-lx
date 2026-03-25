@@ -18,6 +18,7 @@ from psm.schemas.hypothesis import Hypothesis
 from psm.schemas.solution import SolutionMapping, SolverOutput
 from psm.schemas.agent import AgentNewHire, SkillOutput
 from psm.schemas.ingestion import IngestionRecord, IngestionSyncStatus
+from psm.schemas.solvability import SolvabilityReport, CapabilityInventory, OutcomeEntry
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -152,6 +153,50 @@ class DataStore:
 
     def write_sync_status(self, statuses: list[IngestionSyncStatus]) -> None:
         self._write_list(settings.sync_status_path, statuses)
+
+    # --- Solvability ---
+
+    def read_solvability(self) -> SolvabilityReport | None:
+        if not settings.solvability_path.exists():
+            return None
+        raw = json.loads(settings.solvability_path.read_text())
+        return SolvabilityReport.model_validate(raw)
+
+    def write_solvability(self, report: SolvabilityReport) -> None:
+        settings.solvability_path.parent.mkdir(parents=True, exist_ok=True)
+        settings.solvability_path.write_text(
+            json.dumps(report.model_dump(mode="json"), indent=2, default=str)
+        )
+
+    # --- Capability Inventory ---
+
+    def read_capability_inventory(self) -> CapabilityInventory | None:
+        if not settings.capability_inventory_path.exists():
+            return None
+        raw = json.loads(settings.capability_inventory_path.read_text())
+        return CapabilityInventory.model_validate(raw)
+
+    def write_capability_inventory(self, inventory: CapabilityInventory) -> None:
+        settings.capability_inventory_path.parent.mkdir(parents=True, exist_ok=True)
+        settings.capability_inventory_path.write_text(
+            json.dumps(inventory.model_dump(mode="json"), indent=2, default=str)
+        )
+
+    # --- Outcomes Log ---
+
+    def read_outcomes_log(self) -> list[OutcomeEntry]:
+        if not settings.outcomes_log_path.exists():
+            return []
+        entries = []
+        for line in settings.outcomes_log_path.read_text().strip().split("\n"):
+            if line.strip():
+                entries.append(OutcomeEntry.model_validate(json.loads(line)))
+        return entries
+
+    def append_outcome(self, entry: OutcomeEntry) -> None:
+        settings.outcomes_log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings.outcomes_log_path, "a") as f:
+            f.write(json.dumps(entry.model_dump(mode="json"), default=str) + "\n")
 
 
 # Module-level singleton

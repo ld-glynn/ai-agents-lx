@@ -37,6 +37,7 @@ class RunRequest(BaseModel):
     model: str = "claude-sonnet-4-20250514"
     solver_model: str = "claude-sonnet-4-20250514"
     with_integrations: bool = False
+    skip_solvability: bool = False
 
 
 class SyncRequest(BaseModel):
@@ -85,6 +86,7 @@ STAGE_READERS = {
     "skills": store.read_skill_outputs,
     "ingestion": store.read_ingestion,
     "eval": lambda: store._read_list(settings.data_dir / "eval_results.json", __import__("psm.schemas.agent", fromlist=["SkillOutput"]).SkillOutput) if (settings.data_dir / "eval_results.json").exists() else [],
+    "outcomes": store.read_outcomes_log,
 }
 
 
@@ -113,6 +115,7 @@ def run_pipeline_endpoint(request: RunRequest):
             model=request.model,
             solver_model=request.solver_model,
             with_integrations=request.with_integrations,
+            skip_solvability=request.skip_solvability,
         )
         return {"status": "completed", "summary": summary}
     except Exception as e:
@@ -160,6 +163,42 @@ def sync_integrations(request: SyncRequest):
         raise HTTPException(500, f"Sync failed: {str(e)}")
 
 
+class ParseRequest(BaseModel):
+    text: str
+    model: str = "claude-sonnet-4-20250514"
+
+
+@app.post("/api/parse")
+def parse_text(request: ParseRequest):
+    """Parse unstructured text into problem suggestions using the structurer agent."""
+    from psm.schemas.ingestion import IngestionRecord, SourceType
+    from psm.agents.structurer import structure_records
+
+    try:
+        # Wrap text as a single ingestion record
+        record = IngestionRecord(
+            record_id=f"PARSE-{int(datetime.now().timestamp())}",
+            source=SourceType.MANUAL,
+            raw_text=request.text,
+        )
+        problems = structure_records([record], model=request.model)
+        return {
+            "problems": [
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "description": p.description,
+                    "reported_by": p.reported_by,
+                    "domain": p.domain,
+                    "tags": p.tags,
+                }
+                for p in problems
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Parse failed: {str(e)}")
+
+
 @app.get("/api/integrations")
 def get_integrations():
     """Get status of all integration sources."""
@@ -184,6 +223,101 @@ def get_integrations():
     return {
         "sources": sources,
         "total_ingestion_records": len(ingestion),
+    }
+
+
+@app.get("/api/capabilities")
+def get_capabilities():
+    """Get the current capability inventory."""
+    inventory = store.read_capability_inventory()
+    if not inventory:
+        raise HTTPException(404, "Capability inventory not found")
+    return inventory.model_dump(mode="json")
+
+
+@app.post("/api/capabilities")
+def update_capabilities(inventory: dict):
+    """Update the capability inventory."""
+    from psm.schemas.solvability import CapabilityInventory
+    try:
+        validated = CapabilityInventory.model_validate(inventory)
+        store.write_capability_inventory(validated)
+        return {"status": "updated", "agent_types": len(validated.agent_types), "skill_types": len(validated.skill_types)}
+    except Exception as e:
+        raise HTTPException(400, f"Invalid inventory: {str(e)}")
+
+
+@app.get("/api/solvability")
+def get_solvability():
+    """Get the latest solvability report."""
+    report = store.read_solvability()
+    if not report:
+        return {"results": [], "total_patterns": 0, "passed": 0, "flagged": 0, "dropped": 0}
+    return report.model_dump(mode="json")
+
+
+class OutcomeRequest(BaseModel):
+    hypothesis_id: str
+    outcome: str  # "validated" | "invalidated"
+
+
+@app.post("/api/outcomes")
+def record_outcome(request: OutcomeRequest):
+    """Record a hypothesis outcome."""
+    from psm.schemas.solvability import OutcomeEntry
+
+    hypotheses = store.read_hypotheses()
+    hyp = next((h for h in hypotheses if h.hypothesis_id == request.hypothesis_id), None)
+    if not hyp:
+        raise HTTPException(404, f"Hypothesis not found: {request.hypothesis_id}")
+
+    solvability = store.read_solvability()
+    score = 0.5
+    if solvability:
+        result = next((r for r in solvability.results if r.pattern_id == hyp.pattern_id), None)
+        if result:
+            score = result.confidence
+
+    patterns = store.read_patterns()
+    pat = next((p for p in patterns if p.pattern_id == hyp.pattern_id), None)
+    domain = pat.domains_affected[0].value if pat and pat.domains_affected else None
+
+    entry = OutcomeEntry(
+        pattern_id=hyp.pattern_id,
+        hypothesis_id=request.hypothesis_id,
+        solvability_score_at_time=score,
+        outcome=request.outcome,
+        domain=domain,
+    )
+    store.append_outcome(entry)
+    return {"status": "recorded", "entry": entry.model_dump(mode="json")}
+
+
+@app.get("/api/outcomes/summary")
+def get_outcomes_summary():
+    """Aggregate outcome statistics."""
+    outcomes = store.read_outcomes_log()
+    if not outcomes:
+        return {"total": 0, "validated": 0, "invalidated": 0, "validation_rate": 0, "by_domain": {}}
+
+    validated = sum(1 for o in outcomes if o.outcome == "validated")
+    invalidated = sum(1 for o in outcomes if o.outcome == "invalidated")
+    total = len(outcomes)
+
+    by_domain: dict = {}
+    for o in outcomes:
+        d = o.domain or "unknown"
+        if d not in by_domain:
+            by_domain[d] = {"validated": 0, "invalidated": 0, "total": 0}
+        by_domain[d]["total"] += 1
+        by_domain[d][o.outcome] = by_domain[d].get(o.outcome, 0) + 1
+
+    return {
+        "total": total,
+        "validated": validated,
+        "invalidated": invalidated,
+        "validation_rate": validated / total if total > 0 else 0,
+        "by_domain": by_domain,
     }
 
 
