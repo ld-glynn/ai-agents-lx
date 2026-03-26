@@ -39,6 +39,11 @@ class Settings:
     solvability_path: Path
     outcomes_log_path: Path
 
+    # Run history & config
+    history_dir: Path
+    run_history_path: Path
+    pipeline_config_path: Path
+
     @classmethod
     def default(cls) -> "Settings":
         root = _find_project_root()
@@ -64,6 +69,10 @@ class Settings:
             capability_inventory_path=data / "capability_inventory.json",
             solvability_path=data / "solvability.json",
             outcomes_log_path=data / "outcomes_log.jsonl",
+            # Run history & config
+            history_dir=data / "history",
+            run_history_path=data / "run_history.json",
+            pipeline_config_path=data / "pipeline_config.json",
         )
 
 

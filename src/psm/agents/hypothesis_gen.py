@@ -23,12 +23,25 @@ def run_hypothesis_generator(
     patterns: list[Pattern],
     themes: list[ThemeSummary],
     model: str = "claude-sonnet-4-20250514",
+    config: dict | None = None,
 ) -> list[Hypothesis]:
     """Generate hypotheses for identified patterns.
 
     Returns validated Hypothesis objects.
     """
     client = Anthropic()
+
+    config_instructions = ""
+    if config:
+        parts = []
+        if config.get("max_hypotheses_per_pattern"):
+            parts.append(f"Generate at most {config['max_hypotheses_per_pattern']} hypotheses per pattern.")
+        if config.get("confidence_floor"):
+            parts.append(f"Only propose hypotheses with confidence >= {config['confidence_floor']}.")
+        if config.get("effort_preference") and config["effort_preference"] != "any":
+            parts.append(f"Prefer {config['effort_preference']}-effort solutions when possible.")
+        if parts:
+            config_instructions = "\n\nAdditional constraints:\n" + "\n".join(f"- {p}" for p in parts)
 
     user_content = json.dumps(
         {
@@ -41,7 +54,7 @@ def run_hypothesis_generator(
     response = client.messages.create(
         model=model,
         max_tokens=4096,
-        system=build_system_prompt(),
+        system=build_system_prompt() + config_instructions,
         messages=[{"role": "user", "content": user_content}],
     )
 

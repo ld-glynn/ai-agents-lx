@@ -19,6 +19,8 @@ from psm.schemas.solution import SolutionMapping, SolverOutput
 from psm.schemas.agent import AgentNewHire, SkillOutput
 from psm.schemas.ingestion import IngestionRecord, IngestionSyncStatus
 from psm.schemas.solvability import SolvabilityReport, CapabilityInventory, OutcomeEntry
+from psm.schemas.run_history import RunRecord
+from psm.schemas.pipeline_config import PipelineConfig
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -197,6 +199,91 @@ class DataStore:
         settings.outcomes_log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(settings.outcomes_log_path, "a") as f:
             f.write(json.dumps(entry.model_dump(mode="json"), default=str) + "\n")
+
+    # --- Run History & Snapshots ---
+
+    SNAPSHOT_FILES_KEYS = [
+        "catalog_path", "patterns_path", "hypotheses_path", "solvability_path",
+    ]
+    SNAPSHOT_FILES_EXTRA = [
+        "themes.json", "new_hires.json", "skill_outputs.json",
+    ]
+
+    def create_snapshot(self, run_id: str) -> Path:
+        """Copy all data files into a timestamped snapshot directory."""
+        import shutil
+        snapshot_dir = settings.history_dir / run_id
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+
+        # Named paths from settings
+        for key in self.SNAPSHOT_FILES_KEYS:
+            src = getattr(settings, key)
+            if src.exists():
+                shutil.copy2(src, snapshot_dir / src.name)
+
+        # Extra files in data_dir
+        for name in self.SNAPSHOT_FILES_EXTRA:
+            src = settings.data_dir / name if name != "themes.json" else settings.patterns_path.with_name("themes.json")
+            if src.exists():
+                shutil.copy2(src, snapshot_dir / name)
+
+        return snapshot_dir
+
+    def restore_snapshot(self, snapshot_path: Path) -> None:
+        """Restore data files from a snapshot directory."""
+        import shutil
+        if not snapshot_path.exists():
+            raise FileNotFoundError(f"Snapshot not found: {snapshot_path}")
+
+        for f in snapshot_path.iterdir():
+            if f.suffix in (".json", ".jsonl"):
+                # Map back to the correct destination
+                if f.name == "themes.json":
+                    dest = settings.patterns_path.with_name("themes.json")
+                elif f.name in ("new_hires.json", "skill_outputs.json"):
+                    dest = settings.data_dir / f.name
+                else:
+                    # Try to match by name to settings paths
+                    dest = settings.data_dir / f.name
+                shutil.copy2(f, dest)
+
+    def read_run_history(self) -> list[RunRecord]:
+        if not settings.run_history_path.exists():
+            return []
+        raw = json.loads(settings.run_history_path.read_text())
+        return [RunRecord.model_validate(r) for r in raw]
+
+    def append_run_record(self, record: RunRecord) -> None:
+        records = self.read_run_history()
+        records.append(record)
+        settings.run_history_path.parent.mkdir(parents=True, exist_ok=True)
+        data = [r.model_dump(mode="json") for r in records]
+        settings.run_history_path.write_text(json.dumps(data, indent=2, default=str))
+
+    def update_run_record(self, run_id: str, updates: dict) -> None:
+        records = self.read_run_history()
+        for i, r in enumerate(records):
+            if r.run_id == run_id:
+                merged = r.model_dump()
+                merged.update(updates)
+                records[i] = RunRecord.model_validate(merged)
+                break
+        data = [r.model_dump(mode="json") for r in records]
+        settings.run_history_path.write_text(json.dumps(data, indent=2, default=str))
+
+    # --- Pipeline Config ---
+
+    def read_pipeline_config(self) -> PipelineConfig:
+        if not settings.pipeline_config_path.exists():
+            return PipelineConfig()
+        raw = json.loads(settings.pipeline_config_path.read_text())
+        return PipelineConfig.model_validate(raw)
+
+    def write_pipeline_config(self, config: PipelineConfig) -> None:
+        settings.pipeline_config_path.parent.mkdir(parents=True, exist_ok=True)
+        settings.pipeline_config_path.write_text(
+            json.dumps(config.model_dump(mode="json"), indent=2)
+        )
 
 
 # Module-level singleton

@@ -38,6 +38,7 @@ class RunRequest(BaseModel):
     solver_model: str = "claude-sonnet-4-20250514"
     with_integrations: bool = False
     skip_solvability: bool = False
+    config: Optional[dict] = None
 
 
 class SyncRequest(BaseModel):
@@ -110,12 +111,15 @@ def run_pipeline_endpoint(request: RunRequest):
     from psm.agents.orchestrator import run_pipeline
 
     try:
+        from psm.schemas.pipeline_config import PipelineConfig
+        config = PipelineConfig.model_validate(request.config) if request.config else None
         summary = run_pipeline(
             stage=request.stage,
             model=request.model,
             solver_model=request.solver_model,
             with_integrations=request.with_integrations,
             skip_solvability=request.skip_solvability,
+            config=config,
         )
         return {"status": "completed", "summary": summary}
     except Exception as e:
@@ -319,6 +323,57 @@ def get_outcomes_summary():
         "validation_rate": validated / total if total > 0 else 0,
         "by_domain": by_domain,
     }
+
+
+@app.get("/api/runs")
+def get_run_history():
+    """Get pipeline run history."""
+    records = store.read_run_history()
+    return [r.model_dump(mode="json") for r in records]
+
+
+@app.post("/api/rollback/{run_id}")
+def rollback_run(run_id: str):
+    """Rollback to a previous pipeline run's snapshot."""
+    from pathlib import Path
+
+    records = store.read_run_history()
+    record = next((r for r in records if r.run_id == run_id), None)
+    if not record:
+        raise HTTPException(404, f"Run not found: {run_id}")
+
+    snapshot_path = Path(record.snapshot_path)
+    try:
+        store.restore_snapshot(snapshot_path)
+        return {"status": "restored", "restored_from": run_id, "snapshot_path": str(snapshot_path)}
+    except Exception as e:
+        raise HTTPException(500, f"Rollback failed: {str(e)}")
+
+
+@app.get("/api/config")
+def get_pipeline_config():
+    """Get current pipeline configuration."""
+    config = store.read_pipeline_config()
+    return config.model_dump(mode="json")
+
+
+@app.post("/api/config")
+def update_pipeline_config(body: dict):
+    """Update pipeline configuration (partial updates supported)."""
+    from psm.schemas.pipeline_config import PipelineConfig
+    try:
+        existing = store.read_pipeline_config().model_dump()
+        # Deep merge: update each stage section
+        for key in body:
+            if key in existing and isinstance(existing[key], dict) and isinstance(body[key], dict):
+                existing[key].update(body[key])
+            else:
+                existing[key] = body[key]
+        config = PipelineConfig.model_validate(existing)
+        store.write_pipeline_config(config)
+        return config.model_dump(mode="json")
+    except Exception as e:
+        raise HTTPException(400, f"Invalid config: {str(e)}")
 
 
 def main():

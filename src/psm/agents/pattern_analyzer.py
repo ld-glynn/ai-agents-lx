@@ -23,12 +23,29 @@ Nothing else — no markdown, no explanation. Just the JSON object."""
 def run_pattern_analyzer(
     catalog: list[CatalogEntry],
     model: str = "claude-sonnet-4-20250514",
+    config: dict | None = None,
 ) -> tuple[list[Pattern], list[ThemeSummary]]:
     """Analyze the catalog for patterns and themes.
 
     Returns (patterns, themes) — both validated through Pydantic.
     """
     client = Anthropic()
+
+    config_instructions = ""
+    if config:
+        parts = []
+        if config.get("min_cluster_size"):
+            parts.append(f"Each pattern must link at least {config['min_cluster_size']} problems.")
+        if config.get("max_patterns"):
+            parts.append(f"Produce at most {config['max_patterns']} patterns.")
+        if config.get("clustering_strictness") is not None:
+            strictness = config["clustering_strictness"]
+            if strictness > 0.7:
+                parts.append("Be strict: only cluster problems with strong causal connections.")
+            elif strictness < 0.3:
+                parts.append("Be broad: cluster problems with loose thematic similarity.")
+        if parts:
+            config_instructions = "\n\nAdditional constraints:\n" + "\n".join(f"- {p}" for p in parts)
 
     user_content = json.dumps(
         [e.model_dump(mode="json") for e in catalog],
@@ -38,7 +55,7 @@ def run_pattern_analyzer(
     response = client.messages.create(
         model=model,
         max_tokens=4096,
-        system=build_system_prompt(),
+        system=build_system_prompt() + config_instructions,
         messages=[{"role": "user", "content": user_content}],
     )
 

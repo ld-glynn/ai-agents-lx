@@ -27,6 +27,7 @@ def run_cataloger(
     problems: list[RawProblem],
     existing_catalog: list[CatalogEntry] | None = None,
     model: str = "claude-sonnet-4-20250514",
+    config: dict | None = None,
 ) -> list[CatalogEntry]:
     """Run the Cataloger agent on a batch of raw problems.
 

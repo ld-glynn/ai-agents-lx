@@ -33,6 +33,7 @@ def run_hiring_manager(
     patterns: list[Pattern],
     hypotheses: list[Hypothesis],
     model: str = "claude-sonnet-4-20250514",
+    config: dict | None = None,
 ) -> list[AgentNewHire]:
     """Create Agent New Hires — one per pattern, each with skills for their hypotheses.
 

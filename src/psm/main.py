@@ -101,6 +101,45 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 print(f"         {code}: {count}")
 
 
+def cmd_history(args: argparse.Namespace) -> None:
+    """Show pipeline run history."""
+    from psm.tools.data_store import store
+
+    records = store.read_run_history()
+    if not records:
+        print("No runs recorded yet.")
+        return
+
+    print(f"Pipeline Run History ({len(records)} runs):")
+    print("-" * 80)
+    for r in reversed(records):
+        status_icon = {"success": "OK", "partial": "!!", "failed": "XX", "running": ".."}[r.status]
+        stages = ", ".join(r.stages_completed) if r.stages_completed else "(none)"
+        print(f"  [{status_icon}] {r.run_id}  status={r.status}  stages=[{stages}]")
+        if r.error_stage:
+            print(f"       error at {r.error_stage}: {r.error_message}")
+
+
+def cmd_rollback(args: argparse.Namespace) -> None:
+    """Rollback to a previous run's snapshot."""
+    from pathlib import Path
+    from psm.tools.data_store import store
+
+    records = store.read_run_history()
+    record = next((r for r in records if r.run_id == args.run_id), None)
+    if not record:
+        print(f"Run not found: {args.run_id}", file=sys.stderr)
+        sys.exit(1)
+
+    snapshot_path = Path(record.snapshot_path)
+    if not snapshot_path.exists():
+        print(f"Snapshot directory missing: {snapshot_path}", file=sys.stderr)
+        sys.exit(1)
+
+    store.restore_snapshot(snapshot_path)
+    print(f"Restored data from {args.run_id} (snapshot: {snapshot_path})")
+
+
 def cmd_eval_solvability(args: argparse.Namespace) -> None:
     """Run solvability evaluation on existing patterns."""
     from psm.tools.data_store import store
@@ -309,6 +348,15 @@ def cli() -> None:
         help="Model for evaluation runs",
     )
     eval_parser.set_defaults(func=cmd_eval)
+
+    # psm history
+    history_parser = sub.add_parser("history", help="Show pipeline run history")
+    history_parser.set_defaults(func=cmd_history)
+
+    # psm rollback
+    rollback_parser = sub.add_parser("rollback", help="Rollback to a previous run")
+    rollback_parser.add_argument("run_id", help="Run ID to rollback to")
+    rollback_parser.set_defaults(func=cmd_rollback)
 
     # psm eval-solvability
     solv_parser = sub.add_parser("eval-solvability", help="Run solvability evaluation on patterns")

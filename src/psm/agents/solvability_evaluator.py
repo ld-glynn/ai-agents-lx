@@ -48,6 +48,7 @@ def run_solvability_evaluator(
     patterns: list[Pattern],
     *,
     model: str = "claude-sonnet-4-20250514",
+    config: dict | None = None,
 ) -> SolvabilityReport:
     """Evaluate patterns for solvability.
 
