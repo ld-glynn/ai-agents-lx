@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-"""Orchestrator — the New Hire.
+"""Orchestrator — pipeline coordinator.
 
-Coordinates the full pipeline: CSV → Catalog → Patterns → Solvability → Hypotheses → Hire → Execute Skills.
-Each stage runs sequentially. Outputs are persisted to JSON between stages.
-Snapshots are taken before each run for rollback. Errors are caught per-stage.
+Coordinates the discovery pipeline: CSV → Catalog → Patterns → Solvability →
+Hypotheses → Hire + Screen → Generate Deployment Specs.
+
+The pipeline discovers problems and designs agents. It does NOT execute agent work.
+Deployment and invocation happen separately after human approval.
 """
 
 import sys
@@ -18,6 +20,7 @@ from psm.agents.pattern_analyzer import run_pattern_analyzer
 from psm.agents.solvability_evaluator import run_solvability_evaluator
 from psm.agents.hypothesis_gen import run_hypothesis_generator
 from psm.agents.hiring_manager import run_hiring_manager
+from psm.agents.spec_generator import generate_deployment_specs
 from psm.agents.solvers.base import run_skill
 from psm.eval.gate import screen_candidate
 from psm.schemas.run_history import RunRecord
@@ -236,34 +239,34 @@ def run_pipeline(
         store.update_run_record(run_id, {"status": "success", "stages_completed": summary["stages_completed"], "stage_reached": "hire", "summary": summary})
         return summary
 
-    # --- Stage 5: Execute Skills ---
+    # --- Stage 5: Generate Deployment Specs ---
     try:
-        _log("Stage 5: Qualified New Hires executing skills...")
+        _log("Stage 5: Generating deployment specifications...")
         new_hires = store.read_new_hires()
         hypotheses = store.read_hypotheses()
         patterns = store.read_patterns()
-        hyp_by_id = {h.hypothesis_id: h for h in hypotheses}
-        pat_by_id = {p.pattern_id: p for p in patterns}
 
-        outputs = []
+        # Update agent lifecycle states
         for agent in new_hires:
-            pat = pat_by_id.get(agent.pattern_id)
-            if not pat:
-                continue
-            _log(f"  {agent.name} executing {len(agent.skills)} skills...")
-            for skill in sorted(agent.skills, key=lambda s: s.priority):
-                hyp = hyp_by_id.get(skill.hypothesis_id)
-                if not hyp:
-                    continue
-                output = run_skill(agent, skill, hyp, pat, model=solver_model)
-                outputs.append(output)
+            agent.lifecycle_state = "screened"
+        store.write_new_hires(new_hires)
 
-        store.write_skill_outputs(outputs)
-        _log(f"  Produced {len(outputs)} deliverables")
-        summary["skill_output_count"] = len(outputs)
-        summary["stages_completed"].append("execute")
+        specs = generate_deployment_specs(new_hires, patterns, hypotheses)
+        spec_count = store.write_deployment_specs(specs)
+
+        # Update agents with spec references
+        spec_by_agent = {s.agent_id: s.spec_id for s in specs}
+        for agent in new_hires:
+            if agent.agent_id in spec_by_agent:
+                agent.lifecycle_state = "proposed"
+                agent.deployment_spec_id = spec_by_agent[agent.agent_id]
+        store.write_new_hires(new_hires)
+
+        _log(f"  Generated {spec_count} deployment specs (awaiting human approval)")
+        summary["deployment_spec_count"] = spec_count
+        summary["stages_completed"].append("spec")
     except Exception as e:
-        return _fail("execute", e)
+        return _fail("spec", e)
 
     # Success
     summary["status"] = "success"

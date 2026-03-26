@@ -101,6 +101,70 @@ def cmd_eval(args: argparse.Namespace) -> None:
                 print(f"         {code}: {count}")
 
 
+def cmd_deploy(args: argparse.Namespace) -> None:
+    """Deploy an approved agent."""
+    from psm.agents.invoker import deploy_agent
+    from psm.tools.data_store import store
+
+    # Find spec by agent_id
+    specs = store.read_deployment_specs()
+    spec = next((s for s in specs if s.agent_id == args.agent_id), None)
+    if not spec:
+        print(f"No deployment spec found for agent: {args.agent_id}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        result = deploy_agent(spec.spec_id, model=args.model)
+        print(f"\nDeployed: {result['agent_id']}")
+        print(f"  Spec: {result['spec_id']}")
+        print(f"  Initial invocation: {result['initial_invocation_entries']} skills executed")
+    except Exception as e:
+        print(f"Deploy failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_invoke(args: argparse.Namespace) -> None:
+    """Invoke a deployed agent."""
+    from psm.agents.invoker import invoke_agent
+    from psm.schemas.deployment import TriggerType
+
+    try:
+        trigger = TriggerType(args.trigger)
+        entries = invoke_agent(args.agent_id, trigger, args.detail or f"CLI invocation ({trigger.value})", model=args.model)
+        print(f"\nInvoked {args.agent_id}: {len(entries)} skills executed")
+        for e in entries:
+            status = "OK" if e.status == "completed" else "FAIL"
+            print(f"  [{status}] {e.skill_type.value}: {e.action_summary}")
+    except Exception as e:
+        print(f"Invoke failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_agents(args: argparse.Namespace) -> None:
+    """List agents with lifecycle state."""
+    from psm.tools.data_store import store
+
+    agents = store.read_new_hires()
+    specs = store.read_deployment_specs()
+    spec_by_agent = {s.agent_id: s for s in specs}
+
+    if not agents:
+        print("No agents found. Run the pipeline first.")
+        return
+
+    print(f"Agents ({len(agents)}):")
+    print("-" * 70)
+    for a in agents:
+        state = a.lifecycle_state
+        spec = spec_by_agent.get(a.agent_id)
+        work_entries = store.read_work_log(a.agent_id)
+        invocations = len(work_entries)
+        print(f"  [{state:10s}] {a.agent_id}: {a.name}")
+        print(f"             {a.title} | {len(a.skills)} skills | {invocations} invocations")
+        if spec:
+            print(f"             Spec: {spec.spec_id} | Target: {spec.deployment.target.value}")
+
+
 def cmd_history(args: argparse.Namespace) -> None:
     """Show pipeline run history."""
     from psm.tools.data_store import store
@@ -271,6 +335,8 @@ def cmd_status(args: argparse.Namespace) -> None:
         "new_hires.json": settings.data_dir / "new_hires.json",
         "skill_outputs.json": settings.data_dir / "skill_outputs.json",
         "ingestion.json": settings.ingestion_path,
+        "solvability.json": settings.solvability_path,
+        "deployment_specs.json": settings.deployment_specs_path,
     }
 
     print("Pipeline Status:")
@@ -298,7 +364,7 @@ def cli() -> None:
     run_parser = sub.add_parser("run", help="Run the pipeline")
     run_parser.add_argument(
         "--stage",
-        choices=["catalog", "patterns", "solvability", "hypotheses", "hire", "execute"],
+        choices=["catalog", "patterns", "solvability", "hypotheses", "hire", "spec"],
         default=None,
         help="Stop after this stage (default: run all)",
     )
@@ -348,6 +414,24 @@ def cli() -> None:
         help="Model for evaluation runs",
     )
     eval_parser.set_defaults(func=cmd_eval)
+
+    # psm deploy
+    deploy_parser = sub.add_parser("deploy", help="Deploy an approved agent")
+    deploy_parser.add_argument("agent_id", help="Agent ID to deploy")
+    deploy_parser.add_argument("--model", default="claude-sonnet-4-20250514")
+    deploy_parser.set_defaults(func=cmd_deploy)
+
+    # psm invoke
+    invoke_parser = sub.add_parser("invoke", help="Invoke a deployed agent")
+    invoke_parser.add_argument("agent_id", help="Agent ID to invoke")
+    invoke_parser.add_argument("--trigger", choices=["manual", "scheduled", "webhook", "feedback", "api_call"], default="manual")
+    invoke_parser.add_argument("--detail", default=None, help="Trigger detail message")
+    invoke_parser.add_argument("--model", default="claude-sonnet-4-20250514")
+    invoke_parser.set_defaults(func=cmd_invoke)
+
+    # psm agents
+    agents_parser = sub.add_parser("agents", help="List agents with lifecycle state")
+    agents_parser.set_defaults(func=cmd_agents)
 
     # psm history
     history_parser = sub.add_parser("history", help="Show pipeline run history")

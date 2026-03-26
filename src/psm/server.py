@@ -88,6 +88,7 @@ STAGE_READERS = {
     "ingestion": store.read_ingestion,
     "eval": lambda: store._read_list(settings.data_dir / "eval_results.json", __import__("psm.schemas.agent", fromlist=["SkillOutput"]).SkillOutput) if (settings.data_dir / "eval_results.json").exists() else [],
     "outcomes": store.read_outcomes_log,
+    "deployment-specs": store.read_deployment_specs,
 }
 
 
@@ -374,6 +375,124 @@ def update_pipeline_config(body: dict):
         return config.model_dump(mode="json")
     except Exception as e:
         raise HTTPException(400, f"Invalid config: {str(e)}")
+
+
+# --- Deployment Spec & Agent Lifecycle ---
+
+@app.get("/api/specs/{spec_id}")
+def get_spec(spec_id: str):
+    """Get a single deployment spec."""
+    spec = store.get_deployment_spec(spec_id)
+    if not spec:
+        raise HTTPException(404, f"Spec not found: {spec_id}")
+    return spec.model_dump(mode="json")
+
+
+@app.post("/api/specs/{spec_id}/approve")
+def approve_spec(spec_id: str):
+    """Approve a proposed deployment spec."""
+    spec = store.update_deployment_spec(spec_id, {
+        "state": "approved",
+        "approved_at": datetime.now().isoformat(),
+    })
+    if not spec:
+        raise HTTPException(404, f"Spec not found: {spec_id}")
+    return {"status": "approved", "spec_id": spec_id}
+
+
+@app.post("/api/specs/{spec_id}/reject")
+def reject_spec(spec_id: str, body: dict = {}):
+    """Reject a proposed deployment spec."""
+    spec = store.update_deployment_spec(spec_id, {
+        "state": "retired",
+        "retired_at": datetime.now().isoformat(),
+        "retirement_reason": body.get("reason", "Rejected during review"),
+    })
+    if not spec:
+        raise HTTPException(404, f"Spec not found: {spec_id}")
+    return {"status": "rejected", "spec_id": spec_id}
+
+
+@app.post("/api/agents/{agent_id}/deploy")
+def deploy_agent_endpoint(agent_id: str):
+    """Deploy an approved agent (runs initial invocation)."""
+    from psm.agents.invoker import deploy_agent
+    specs = store.read_deployment_specs()
+    spec = next((s for s in specs if s.agent_id == agent_id), None)
+    if not spec:
+        raise HTTPException(404, f"No spec found for agent: {agent_id}")
+    try:
+        result = deploy_agent(spec.spec_id)
+        return result
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+class InvokeRequest(BaseModel):
+    trigger_type: str = "manual"
+    trigger_detail: str = "Manual invocation from dashboard"
+    model: str = "claude-sonnet-4-20250514"
+
+
+@app.post("/api/agents/{agent_id}/invoke")
+def invoke_agent_endpoint(agent_id: str, request: InvokeRequest):
+    """Invoke a deployed agent to do work."""
+    from psm.agents.invoker import invoke_agent
+    from psm.schemas.deployment import TriggerType
+    try:
+        trigger = TriggerType(request.trigger_type)
+        entries = invoke_agent(agent_id, trigger, request.trigger_detail, model=request.model)
+        return {
+            "status": "completed",
+            "agent_id": agent_id,
+            "entries": [e.model_dump(mode="json") for e in entries],
+        }
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/agents/{agent_id}/pause")
+def pause_agent_endpoint(agent_id: str):
+    """Pause a deployed agent."""
+    from psm.agents.invoker import pause_agent
+    try:
+        return pause_agent(agent_id)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/agents/{agent_id}/resume")
+def resume_agent_endpoint(agent_id: str):
+    """Resume a paused agent."""
+    from psm.agents.invoker import resume_agent
+    try:
+        return resume_agent(agent_id)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/agents/{agent_id}/retire")
+def retire_agent_endpoint(agent_id: str, body: dict = {}):
+    """Retire an agent permanently."""
+    from psm.agents.invoker import retire_agent
+    try:
+        return retire_agent(agent_id, reason=body.get("reason", ""))
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/agents/{agent_id}/work-log")
+def get_work_log(agent_id: str):
+    """Get the full work log for an agent."""
+    entries = store.read_work_log(agent_id)
+    return [e.model_dump(mode="json") for e in entries]
+
+
+@app.get("/api/work-logs")
+def get_all_work_logs():
+    """Get work logs for all agents."""
+    logs = store.read_all_work_logs()
+    return [log.model_dump(mode="json") for log in logs]
 
 
 def main():

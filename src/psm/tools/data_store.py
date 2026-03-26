@@ -21,6 +21,8 @@ from psm.schemas.ingestion import IngestionRecord, IngestionSyncStatus
 from psm.schemas.solvability import SolvabilityReport, CapabilityInventory, OutcomeEntry
 from psm.schemas.run_history import RunRecord
 from psm.schemas.pipeline_config import PipelineConfig
+from psm.schemas.deployment import DeploymentSpec
+from psm.schemas.work_log import WorkLogEntry, WorkLog
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -284,6 +286,71 @@ class DataStore:
         settings.pipeline_config_path.write_text(
             json.dumps(config.model_dump(mode="json"), indent=2)
         )
+
+    # --- Deployment Specs ---
+
+    def read_deployment_specs(self) -> list[DeploymentSpec]:
+        return self._read_list(settings.deployment_specs_path, DeploymentSpec)
+
+    def write_deployment_specs(self, specs: list[DeploymentSpec]) -> int:
+        self._write_list(settings.deployment_specs_path, specs)
+        return len(specs)
+
+    def get_deployment_spec(self, spec_id: str) -> DeploymentSpec | None:
+        specs = self.read_deployment_specs()
+        return next((s for s in specs if s.spec_id == spec_id), None)
+
+    def update_deployment_spec(self, spec_id: str, updates: dict) -> DeploymentSpec | None:
+        specs = self.read_deployment_specs()
+        for i, s in enumerate(specs):
+            if s.spec_id == spec_id:
+                merged = s.model_dump()
+                merged.update(updates)
+                specs[i] = DeploymentSpec.model_validate(merged)
+                self._write_list(settings.deployment_specs_path, specs)
+                return specs[i]
+        return None
+
+    # --- Work Logs ---
+
+    def _work_log_path(self, agent_id: str) -> Path:
+        return settings.work_logs_dir / f"{agent_id}.jsonl"
+
+    def read_work_log(self, agent_id: str) -> list[WorkLogEntry]:
+        path = self._work_log_path(agent_id)
+        if not path.exists():
+            return []
+        entries = []
+        for line in path.read_text().strip().split("\n"):
+            if line.strip():
+                entries.append(WorkLogEntry.model_validate(json.loads(line)))
+        return entries
+
+    def append_work_log_entry(self, agent_id: str, entry: WorkLogEntry) -> None:
+        path = self._work_log_path(agent_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(entry.model_dump(mode="json"), default=str) + "\n")
+
+    def read_all_work_logs(self) -> list[WorkLog]:
+        """Read work logs for all agents."""
+        logs = []
+        if not settings.work_logs_dir.exists():
+            return logs
+        for path in settings.work_logs_dir.glob("*.jsonl"):
+            agent_id = path.stem
+            entries = self.read_work_log(agent_id)
+            if entries:
+                spec_id = entries[0].spec_id if entries else ""
+                logs.append(WorkLog(
+                    agent_id=agent_id,
+                    spec_id=spec_id,
+                    entries=entries,
+                    total_invocations=len(entries),
+                    last_invoked_at=entries[-1].started_at if entries else None,
+                    last_output_at=next((e.completed_at for e in reversed(entries) if e.completed_at), None),
+                ))
+        return logs
 
 
 # Module-level singleton

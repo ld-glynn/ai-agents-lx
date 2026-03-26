@@ -44,6 +44,10 @@ class Settings:
     run_history_path: Path
     pipeline_config_path: Path
 
+    # Deployment & work logs
+    deployment_specs_path: Path
+    work_logs_dir: Path
+
     @classmethod
     def default(cls) -> "Settings":
         root = _find_project_root()
@@ -73,6 +77,9 @@ class Settings:
             history_dir=data / "history",
             run_history_path=data / "run_history.json",
             pipeline_config_path=data / "pipeline_config.json",
+            # Deployment & work logs
+            deployment_specs_path=data / "deployment_specs.json",
+            work_logs_dir=data / "work_logs",
         )
 
 

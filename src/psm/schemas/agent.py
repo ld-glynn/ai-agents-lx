@@ -2,8 +2,8 @@ from __future__ import annotations
 """Agent schemas — the three-tier agent model.
 
 Tier 1: Engine Agents (Cataloger, Pattern Analyzer, etc.) — defined in code, not data.
-Tier 2: Agent New Hires — created by the Solver Router per problem cluster.
-Tier 3: Skills — capabilities each New Hire can use.
+Tier 2: Agent New Hires — created by the Hiring Manager per problem cluster.
+Tier 3: Skills — repeatable capabilities each New Hire can use.
 
 This file defines Tier 2 and Tier 3 as data contracts.
 """
@@ -20,14 +20,10 @@ class SkillType(str, Enum):
     ACTION_PLAN = "action_plan"
     PROCESS_DOC = "process_doc"
     INVESTIGATE = "investigate"
-    # Future skills:
-    # FILE_TICKET = "file_ticket"
-    # SEND_UPDATE = "send_update"
-    # CREATE_DOC = "create_doc"
 
 
 class AgentSkill(BaseModel):
-    """A specific skill assigned to a New Hire, with context for how to use it."""
+    """A repeatable skill assigned to a New Hire."""
 
     model_config = {"strict": True}
 
@@ -35,17 +31,20 @@ class AgentSkill(BaseModel):
     hypothesis_id: str = Field(min_length=1)
     priority: int = Field(ge=1, le=5)
     status: str = "pending"  # pending | in_progress | complete
+    last_executed_at: datetime | None = None
+    execution_count: int = 0
 
 
 class AgentNewHire(BaseModel):
-    """Tier 2: A specialized agent created to address a specific problem cluster.
+    """Tier 2: A specialized agent created to own a specific problem cluster.
 
-    Created by the Solver Router based on pattern analysis.
+    Created by the Hiring Manager based on pattern analysis.
     Each New Hire gets:
     - A name and persona tailored to their problem domain
-    - Context about the pattern they're solving
-    - A set of skills (Tier 3) they can use
+    - Context about the pattern they own
+    - A set of skills (Tier 3) they can use repeatedly
     - Assignment to a team role for collaboration
+    - A lifecycle state tracking their progression from candidate to deployed worker
     """
 
     model_config = {"strict": True}
@@ -61,9 +60,17 @@ class AgentNewHire(BaseModel):
     model: str = "claude-sonnet-4-20250514"
     created_at: datetime = Field(default_factory=datetime.now)
 
+    # Lifecycle
+    lifecycle_state: str = "created"  # matches AgentLifecycleState values
+    deployment_spec_id: str | None = None
+
 
 class SkillOutput(BaseModel):
-    """The deliverable produced when a New Hire uses a skill."""
+    """The deliverable produced when a New Hire uses a skill.
+
+    Each invocation of a deployed agent produces SkillOutput entries,
+    tracked by invocation_number and linked to the work log.
+    """
 
     model_config = {"strict": True}
 
@@ -75,3 +82,7 @@ class SkillOutput(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)
     reviewed: bool = False
+
+    # Lifecycle linkage
+    work_log_entry_id: str | None = None
+    invocation_number: int = 1
