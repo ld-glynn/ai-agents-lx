@@ -21,6 +21,7 @@ from anthropic import Anthropic
 
 from psm.config import settings
 from psm.integrations.wisdom_client import call_wisdom_tool, wisdom_configured
+from psm.integrations.wisdom import _flatten_search_payload as _wisdom_flatten
 from psm.schemas.ingestion import IngestionRecord, SourceType
 from psm.tools.context_loader import load_job_description, load_onboarding
 
@@ -347,7 +348,81 @@ class _ScoutSession:
 # --- IngestionRecord conversion --------------------------------------------
 
 
-def _finding_to_record(finding: dict[str, Any], index: int) -> IngestionRecord:
+def _drill_feedback_items(
+    entity_id: str,
+    entity_type: str | None,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Drill from a Scout finding's entity_id to the underlying NaturalLanguageInteractions.
+
+    A FeedbackInsight is associated 1:1 with an NLI via ``feedback_record_id``.
+    A Theme groups many FeedbackInsights via CustomerFeedbackTags. We try the
+    insight-shaped query first when entity_type is unknown, then fall back to
+    Theme. Returns a possibly-empty list of ``{source, text, origin_id}`` dicts.
+
+    Safe to call when Wisdom isn't configured (returns []). Failures of an
+    individual query don't propagate — the drill is best-effort.
+    """
+    if not entity_id or not wisdom_configured():
+        return []
+
+    safe_id = entity_id.replace("\\", "\\\\").replace("'", "\\'")
+
+    insight_cypher = (
+        f"MATCH (i:FeedbackInsight) WHERE i.record_id = '{safe_id}' "
+        f"MATCH (n:NaturalLanguageInteraction) WHERE n.record_id = i.feedback_record_id "
+        f"RETURN n.source AS source, n.origin_record_id AS origin_id, n.content AS text "
+        f"LIMIT {limit}"
+    )
+    theme_cypher = (
+        f"MATCH (t:Theme) WHERE t.record_id = '{safe_id}' "
+        f"MATCH (t)-[]-(tag:CustomerFeedbackTags)-[]-(i:FeedbackInsight) "
+        f"MATCH (n:NaturalLanguageInteraction) WHERE n.record_id = i.feedback_record_id "
+        f"RETURN n.source AS source, n.origin_record_id AS origin_id, n.content AS text "
+        f"LIMIT {limit}"
+    )
+
+    et = (entity_type or "").strip().lower()
+    if et == "feedbackinsight":
+        plan = [("feedbackinsight", insight_cypher)]
+    elif et == "theme":
+        plan = [("theme", theme_cypher)]
+    else:
+        plan = [("feedbackinsight", insight_cypher), ("theme", theme_cypher)]
+
+    for label, cypher in plan:
+        try:
+            ok, data = call_wisdom_tool(
+                "execute_cypher_query",
+                {"cypher_query": cypher, "description": f"scout drill ({label}) {entity_id[:40]}"},
+            )
+        except Exception:
+            continue
+        if not ok:
+            continue
+        items: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in _wisdom_flatten(data):
+            origin_id = str(row.get("origin_id") or "").strip()
+            if not origin_id or origin_id in seen:
+                continue
+            seen.add(origin_id)
+            items.append({
+                "source": str(row.get("source") or "").strip(),
+                "text": str(row.get("text") or "").strip(),
+                "origin_id": origin_id,
+            })
+        if items:
+            return items
+
+    return []
+
+
+def _finding_to_record(
+    finding: dict[str, Any],
+    index: int,
+    feedback_items: list[dict[str, Any]] | None = None,
+) -> IngestionRecord:
     entity_id_raw = str(finding.get("entity_id") or f"scout-{index + 1:04d}")
     record_id = f"WISDOM-{_sanitize_id(entity_id_raw)}"
 
@@ -383,6 +458,9 @@ def _finding_to_record(finding: dict[str, Any], index: int) -> IngestionRecord:
         metadata["upstream_sources"] = sources_clean
         if len(sources_clean) == 1:
             metadata["upstream_source"] = sources_clean[0]
+    if feedback_items:
+        metadata["feedback_items"] = feedback_items
+        metadata["feedback_sample_count"] = len(feedback_items)
 
     return IngestionRecord(
         record_id=record_id,
@@ -575,7 +653,13 @@ def _run_live(config: ScoutConfig) -> ScoutResult:
 
         messages.append({"role": "user", "content": tool_results})
 
-    records = [_finding_to_record(f, i) for i, f in enumerate(session.findings)]
+    records: list[IngestionRecord] = []
+    for i, f in enumerate(session.findings):
+        items = _drill_feedback_items(
+            str(f.get("entity_id") or ""),
+            f.get("entity_type") if isinstance(f.get("entity_type"), str) else None,
+        )
+        records.append(_finding_to_record(f, i, feedback_items=items))
     return ScoutResult(
         records=records,
         trace=session.trace,
