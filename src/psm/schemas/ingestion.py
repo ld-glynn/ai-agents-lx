@@ -1,9 +1,9 @@
-from __future__ import annotations
 """Ingestion schemas — upstream of RawProblem.
 
 IngestionRecord: raw data fetched from an external source (Salesforce, Gong, Slack).
 The Structurer agent converts these into RawProblem objects for the pipeline.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
@@ -17,12 +17,11 @@ class SourceType(str, Enum):
     SLACK = "slack"
     CSV = "csv"
     MANUAL = "manual"
+    WISDOM = "wisdom"  # Enterpret Knowledge Graph (MCP search_knowledge_graph)
 
 
 class IngestionRecord(BaseModel):
     """A raw data record fetched from an external source."""
-
-    model_config = {"strict": True}
 
     record_id: str = Field(min_length=1)
     source: SourceType
@@ -36,8 +35,6 @@ class IngestionRecord(BaseModel):
 
 class IngestionSyncStatus(BaseModel):
     """Tracks the connection and sync state of an integration source."""
-
-    model_config = {"strict": True}
 
     source: SourceType
     enabled: bool = True

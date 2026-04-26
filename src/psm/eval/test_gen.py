@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 """Test case generator — creates screening and gold test cases from pipeline data.
 
 For each skill type, generates cases with known inputs (hypothesis + pattern)
 and expected output characteristics. These become the rubric the candidate
 agent is evaluated against.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 

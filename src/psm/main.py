@@ -296,11 +296,13 @@ def cmd_sync(args: argparse.Namespace) -> None:
         print(f"\nPersisted {new_count} new ingestion records")
 
         print("Running Structurer agent...")
-        problems = structure_records(all_records, model=args.model)
-        print(f"Extracted {len(problems)} problems")
+        extracted = structure_records(all_records, model=args.model)
+        print(f"Extracted {len(extracted)} problems")
 
-        for p in problems:
-            print(f"  {p.id}: {p.title}")
+        for ep in extracted:
+            print(f"  {ep.problem.id}: {ep.problem.title}")
+            if ep.evidence:
+                print(f"    Evidence: {ep.evidence}")
     else:
         print("No records fetched.")
 

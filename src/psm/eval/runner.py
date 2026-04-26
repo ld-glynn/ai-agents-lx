@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 """Eval runner — invokes a candidate agent against test cases and collects results.
 
 The runner calls the same skill executor (solvers/base.py) that production uses,
 so we're testing the actual agent behavior, not a mock.
 """
+from __future__ import annotations
 
 import sys
 import json
@@ -14,7 +13,7 @@ from dataclasses import dataclass, field
 from psm.schemas.agent import AgentNewHire
 from psm.schemas.hypothesis import Hypothesis
 from psm.schemas.pattern import Pattern
-from psm.eval.test_gen import TestCase, generate_test_cases
+from psm.eval.test_gen import generate_test_cases
 from psm.eval.scorer import ScoreResult, score_case
 from psm.eval.failure_codes import FailureCode
 
@@ -111,8 +110,13 @@ def run_eval(
 
     _log(f"  Running {len(cases)} {stage} cases for {agent.name}...")
 
-    for case in cases:
+    for case_idx, case in enumerate(cases):
         _log(f"    Case {case.case_id}: {case.skill.skill_type.value}...")
+        try:
+            from psm.agents.orchestrator import report_sub_progress
+            report_sub_progress(f"Screening {agent.name}: test {case_idx+1}/{len(cases)} ({case.skill.skill_type.value})")
+        except ImportError:
+            pass
 
         start = time.time()
         try:
@@ -146,7 +150,7 @@ def run_eval(
                 failures=[FailureCode.JSON_PARSE_ERROR],
                 failure_details=[f"Agent returned unparseable output: {e}"],
             )
-            _log(f"    FAIL (JSON parse error)")
+            _log("    FAIL (JSON parse error)")
 
         except TimeoutError:
             result = ScoreResult(
@@ -156,7 +160,7 @@ def run_eval(
                 failures=[FailureCode.TIMEOUT],
                 failure_details=[f"Exceeded {timeout_seconds}s timeout"],
             )
-            _log(f"    FAIL (timeout)")
+            _log("    FAIL (timeout)")
 
         except Exception as e:
             result = ScoreResult(
@@ -172,7 +176,7 @@ def run_eval(
 
         # Screening: fail fast on hard failure
         if stage == "screening" and result.has_hard_failure:
-            _log(f"    Screening fail-fast: hard failure detected, stopping")
+            _log("    Screening fail-fast: hard failure detected, stopping")
             break
 
     return eval_run

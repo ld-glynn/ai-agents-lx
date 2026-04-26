@@ -1,5 +1,5 @@
-from __future__ import annotations
 """Run history schemas — tracking pipeline executions and enabling rollback."""
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Literal
@@ -20,3 +20,6 @@ class RunRecord(BaseModel):
     snapshot_path: str = ""
     summary: dict = Field(default_factory=dict)
     config_used: dict = Field(default_factory=dict)
+    # Live progress tracking
+    current_stage: str | None = None
+    progress_message: str | None = None

@@ -8,9 +8,6 @@ Tests that:
 5. Patterns outside capability space get dropped
 """
 
-import json
-import tempfile
-from pathlib import Path
 
 import pytest
 

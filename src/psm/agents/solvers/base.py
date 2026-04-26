@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 """Skill executor — runs a skill on behalf of an Agent New Hire.
 
 Each New Hire has a persona and context. When they use a skill,
 the persona becomes the system prompt and the playbook guides the output.
 """
+from __future__ import annotations
 
 import json
 

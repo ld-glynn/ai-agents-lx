@@ -1,10 +1,10 @@
-from __future__ import annotations
 """Solvability schemas — output of the Solvability Evaluator.
 
 Sits between Pattern Analyzer (input: Pattern) and Hypothesis Generator.
 Decides which patterns are worth generating hypotheses for, based on
 the system's declared capabilities and historical outcomes.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
@@ -21,8 +21,6 @@ class SolvabilityStatus(str, Enum):
 class SolvabilityResult(BaseModel):
     """Evaluation result for a single pattern."""
 
-    model_config = {"strict": True}
-
     pattern_id: str = Field(min_length=1)
     status: SolvabilityStatus
     confidence: float = Field(ge=0.0, le=1.0)
@@ -35,8 +33,6 @@ class SolvabilityResult(BaseModel):
 
 class SolvabilityReport(BaseModel):
     """Full output of the solvability evaluation stage."""
-
-    model_config = {"strict": True}
 
     results: list[SolvabilityResult] = Field(min_length=0)
     total_patterns: int = Field(ge=0)

@@ -1,5 +1,5 @@
-from __future__ import annotations
 """Load problems from a Google Sheet CSV export."""
+from __future__ import annotations
 
 import csv
 from pathlib import Path

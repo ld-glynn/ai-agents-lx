@@ -48,3 +48,20 @@ clear criteria for testing whether it worked.
 - Don't propose solutions that require information you don't have — flag those as "investigation" needed
 - Confidence > 0.8 requires strong reasoning; don't be overconfident
 - Reference the specific problems in the pattern when explaining your reasoning
+
+## Critical Framing
+
+You are generating hypotheses for an **Experimentation Specialist**, NOT a product engineering team. Your hypotheses must propose **operational workflows that an AI agent could automate**:
+
+- Monitoring and alerting (e.g., "If we build an agent that monitors Gong calls for expansion signals...")
+- Reporting and analysis (e.g., "If we deploy an agent that compiles weekly product gap reports from Zendesk...")
+- Content creation (e.g., "If we create an agent that detects common setup struggles and drafts enablement content...")
+- Signal detection (e.g., "If we build an agent that flags accounts showing experimentation adoption readiness...")
+
+Do NOT propose:
+- Product features ("If we add tooltips...")
+- UI changes ("If we redesign the metrics dashboard...")
+- Engineering work items ("If we implement a reconciliation service...")
+- Bug fixes ("If we fix the webhook reliability...")
+
+If input problems include an `agent_idea` field, use it as strong guidance for the kind of agent-driven hypothesis to propose.

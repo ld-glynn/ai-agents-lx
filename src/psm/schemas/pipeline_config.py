@@ -1,8 +1,8 @@
-from __future__ import annotations
 """Pipeline configuration schemas — per-stage settings.
 
 All fields have defaults, so an empty {} produces valid default config.
 """
+from __future__ import annotations
 
 from typing import Literal
 
@@ -12,12 +12,14 @@ from pydantic import BaseModel, Field
 class CatalogerConfig(BaseModel):
     severity_threshold: Literal["low", "medium", "high", "critical"] = "medium"
     domain_filter: list[str] | None = None  # None = all domains
+    model: str | None = None  # Override model for this stage (e.g., haiku for cost savings)
 
 
 class PatternAnalyzerConfig(BaseModel):
     min_cluster_size: int = Field(default=2, ge=2)
     max_patterns: int = Field(default=20, ge=1)
     clustering_strictness: float = Field(default=0.5, ge=0.0, le=1.0)
+    model: str | None = None
 
 
 class SolvabilityConfig(BaseModel):

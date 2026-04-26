@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Scorer — validates agent output against test case expectations.
 
 Three phases (borrowed from elliot-eval):
@@ -7,6 +5,7 @@ Three phases (borrowed from elliot-eval):
   2. Schema: Does it pass Pydantic validation?
   3. Quality: Does it meet the rubric (references, content depth, keywords)?
 """
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
@@ -75,7 +74,6 @@ def _check_hallucinated_refs(
 ) -> list[str]:
     """Check that the output doesn't reference IDs that don't exist in input context."""
     issues: list[str] = []
-    content_lower = output.content.lower()
 
     # Build the set of valid IDs from input context
     valid_ids: set[str] = set()

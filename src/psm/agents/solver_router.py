@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """Solver Router agent — maps hypotheses to solver types and team roles."""
+from __future__ import annotations
 
 import json
 

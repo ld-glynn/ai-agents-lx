@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Deployment schemas — the persistent agent lifecycle.
 
 A DeploymentSpec is the portable blueprint for deploying an agent.
@@ -8,6 +7,7 @@ what outputs it produces — independent of where it runs.
 The spec is deployment-target agnostic. A DeploymentAdapter translates
 the spec into a specific runtime (local, AWS Lambda, Agent SDK, etc.).
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
@@ -66,8 +66,6 @@ class DeploymentSpec(BaseModel):
     This is what the pipeline produces and a human reviews.
     It describes the agent, its job, its triggers, and where it can run.
     """
-
-    model_config = {"strict": True}
 
     spec_id: str = Field(min_length=1)
     agent_id: str = Field(min_length=1)

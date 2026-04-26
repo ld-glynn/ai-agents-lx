@@ -1,9 +1,9 @@
-from __future__ import annotations
 """Solution schemas — output of the Solver Router and Solver agents.
 
 SolutionMapping: connects a hypothesis to a solver type + team role.
 SolverOutput: the actual deliverable produced by a solver agent.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
@@ -28,8 +28,6 @@ class SolutionStatus(str, Enum):
 class SolutionMapping(BaseModel):
     """Maps a hypothesis to a solver type and optionally a team role."""
 
-    model_config = {"strict": True}
-
     mapping_id: str = Field(min_length=1)
     hypothesis_id: str = Field(min_length=1)
     solver_type: SolverType
@@ -41,8 +39,6 @@ class SolutionMapping(BaseModel):
 
 class SolverOutput(BaseModel):
     """The deliverable produced by a solver agent."""
-
-    model_config = {"strict": True}
 
     mapping_id: str = Field(min_length=1)
     solver_type: SolverType

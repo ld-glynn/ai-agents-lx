@@ -1,9 +1,9 @@
-from __future__ import annotations
 """Problem schemas — the foundation contract.
 
 RawProblem: direct mapping from CSV row (Google Sheet export).
 CatalogEntry: normalized by the Cataloger agent, validated strictly.
 """
+from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
@@ -32,9 +32,7 @@ class Domain(str, Enum):
 
 
 class RawProblem(BaseModel):
-    """Direct mapping from a CSV row. Minimal validation — just structure."""
-
-    model_config = {"strict": True}
+    """Direct mapping from a CSV row or Wisdom discovery. Minimal validation."""
 
     id: str = Field(min_length=1)
     title: str = Field(min_length=1)
@@ -43,6 +41,13 @@ class RawProblem(BaseModel):
     date_reported: str = Field(min_length=1)
     domain: str | None = None
     tags: str | None = None  # comma-separated from sheet
+    # Provenance fields from Wisdom enrichment (optional — absent for CSV imports)
+    agent_idea: str | None = None
+    synthesis: str | None = None
+    evidence: str | None = None
+    upstream_sources: list[str] = Field(default_factory=list)
+    source_counts: dict[str, int] = Field(default_factory=dict)
+    source_record_ids: list[str] = Field(default_factory=list)
 
 
 class CatalogEntry(BaseModel):
@@ -58,8 +63,6 @@ class CatalogEntry(BaseModel):
     - reporter_role is None → MISSING_OPTIONAL_FIELD
     """
 
-    model_config = {"strict": True}
-
     problem_id: str = Field(min_length=1)
     title: str = Field(min_length=1, max_length=200)
     description_normalized: str = Field(min_length=10)
@@ -71,6 +74,10 @@ class CatalogEntry(BaseModel):
     frequency: str | None = None  # "daily", "weekly", "monthly", "rare"
     impact_summary: str | None = None
     cataloged_at: datetime = Field(default_factory=datetime.now)
+    # Provenance — carried forward from RawProblem
+    source_record_ids: list[str] = Field(default_factory=list)
+    agent_idea: str | None = None
+    upstream_sources: list[str] = Field(default_factory=list)
 
     @field_validator("tags")
     @classmethod

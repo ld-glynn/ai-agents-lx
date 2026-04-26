@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Agent Invoker — trigger deployed agents to do work.
 
 Handles the full invocation lifecycle:
@@ -9,17 +7,15 @@ Handles the full invocation lifecycle:
 4. Store outputs and update the work log
 5. Update agent lifecycle state
 """
+from __future__ import annotations
 
 import sys
 from datetime import datetime
 
 from psm.tools.data_store import store
 from psm.agents.solvers.base import run_skill
-from psm.schemas.agent import AgentNewHire, AgentSkill, SkillOutput
-from psm.schemas.deployment import DeploymentSpec, AgentLifecycleState, TriggerType
+from psm.schemas.deployment import AgentLifecycleState, TriggerType
 from psm.schemas.work_log import WorkLogEntry
-from psm.schemas.pattern import Pattern
-from psm.schemas.hypothesis import Hypothesis
 
 
 def _log(msg: str) -> None:

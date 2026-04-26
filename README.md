@@ -211,10 +211,14 @@ psm/
 ```bash
 cd psm
 python3 -m venv .venv
-source .venv/bin/activate
-pip install pydantic anthropic eval_type_backport
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U pip
+pip install -e ".[dev]"     # core + FastAPI server + pytest/ruff
+# Optional: pip install -e ".[claude-code]"  # Claude Code SDK (Python >=3.10, when you need that package)
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+With the editable install, use `python -m psm.main` (no `PYTHONPATH=src` required). For one-off commands you can still use `PYTHONPATH=src python -m psm.main` if you prefer.
 
 ## Usage
 
@@ -304,9 +308,20 @@ The [elliot-eval](../elliot-eval/) harness is a TypeScript evaluation framework 
 
 The key difference: elliot-eval tests agents against static, curated test sets. PSM generates test cases dynamically from the pipeline's own data — each Agent New Hire is tested against the specific patterns and hypotheses it was created to solve.
 
+## Enterpret Wisdom (Knowledge Graph)
+
+PSM can treat **Enterpret Wisdom** like any other ingestion source: MCP tool results become `IngestionRecord` rows, then the **Structurer** turns them into `RawProblem` entries for the catalog stage.
+
+- **Adapter**: `src/psm/integrations/wisdom.py` — calls `search_knowledge_graph` via the same HTTP+SSE MCP gateway as Cursor (`src/psm/integrations/wisdom_client.py`).
+- **Mock data**: `data/mock/wisdom_search_hits.json` (no credentials).
+- **Live**: set `WISDOM_API_BASE_URL` (full MCP URL) and `WISDOM_API_TOKEN`. Optional: `WISDOM_SEARCH_QUERY`, `WISDOM_SEARCH_LIMIT`, `WISDOM_ENTITY_TYPES` (comma-separated).
+- **Sync**: `POST /api/sync` with `"source": "wisdom"` and `"mock": false` for live KG search; optional body fields `wisdom_query` and `wisdom_limit` override the env defaults for that run. With `"source": "all"`, Wisdom runs alongside Salesforce, Gong, and Slack.
+
+The structured payload shape from Wisdom may vary; the adapter flattens common keys (`results`, `entities`, `hits`, …) and falls back to a single JSON blob record if needed.
+
 ## Future
 
-- **Automated inputs**: Ingest from Salesforce, Gong, support tickets (not just CSV)
+- **Automated inputs**: Expand beyond CSV — Salesforce, Gong, Slack, and Wisdom KG search are wired; support tickets and more sources can follow
 - **Feedback loop**: Track which hypotheses were tested and whether they worked
 - **Interactive mode**: Chat with the orchestrator to explore problems and solutions
 - **Gold evaluation dataset**: Curate gold-standard test cases for each skill type

@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """Pattern Analyzer agent — clusters related problems and identifies themes."""
+from __future__ import annotations
 
 import json
 
@@ -8,12 +7,16 @@ from anthropic import Anthropic
 
 from psm.schemas.problem import CatalogEntry
 from psm.schemas.pattern import Pattern, ThemeSummary
-from psm.tools.context_loader import load_job_description
+from psm.tools.context_loader import load_job_description, load_onboarding
 
 
 def build_system_prompt() -> str:
     job_desc = load_job_description("pattern_analyzer")
+    onboarding = load_onboarding()
     return f"""{job_desc}
+
+## User Context
+{onboarding}
 
 You will receive the full problem catalog as JSON. Analyze it and return a JSON object with
 two keys: "patterns" (array of Pattern objects) and "themes" (array of ThemeSummary objects).
@@ -54,7 +57,7 @@ def run_pattern_analyzer(
 
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=16384,
         system=build_system_prompt() + config_instructions,
         messages=[{"role": "user", "content": user_content}],
     )
@@ -68,13 +71,14 @@ def run_pattern_analyzer(
     patterns = [Pattern.model_validate(p) for p in raw["patterns"]]
     themes = [ThemeSummary.model_validate(t) for t in raw["themes"]]
 
-    # Validate referential integrity: all problem_ids must exist in catalog
+    # Clean referential integrity: drop invalid problem_ids instead of crashing
     catalog_ids = {e.problem_id for e in catalog}
     for pat in patterns:
         invalid = set(pat.problem_ids) - catalog_ids
         if invalid:
-            raise ValueError(
-                f"Pattern {pat.pattern_id} references non-existent problems: {invalid}"
-            )
+            print(f"  [pattern_analyzer] Warning: {pat.pattern_id} references unknown problems {invalid} — removing them")
+            pat.problem_ids = [pid for pid in pat.problem_ids if pid in catalog_ids]
+    # Drop patterns with no valid problems left
+    patterns = [p for p in patterns if p.problem_ids]
 
     return patterns, themes

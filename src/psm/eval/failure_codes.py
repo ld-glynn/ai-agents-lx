@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 """Failure codes — hard failures block deployment, soft failures are warnings.
 
 Borrowed from elliot-eval's hard/soft classification pattern.
 Hard failures mean the agent fundamentally can't do the job.
 Soft failures mean it can, but the output quality needs attention.
 """
+from __future__ import annotations
 
 from enum import Enum
 

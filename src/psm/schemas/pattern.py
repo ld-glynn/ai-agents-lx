@@ -1,8 +1,8 @@
-from __future__ import annotations
 """Pattern schemas — output of the Pattern Analyzer.
 
 Patterns cluster related problems. Themes group patterns.
 """
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
@@ -12,22 +12,22 @@ from psm.schemas.problem import Domain
 class Pattern(BaseModel):
     """A cluster of related problems with a shared root cause signal."""
 
-    model_config = {"strict": True}
-
     pattern_id: str = Field(min_length=1)
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(min_length=10)
-    problem_ids: list[str] = Field(min_length=2)  # must link ≥2 problems
+    problem_ids: list[str] = Field(min_length=1)  # singletons allowed: a uniquely significant recurring problem is still a pattern
     domains_affected: list[Domain] = Field(min_length=1)
-    frequency: int = Field(ge=2)  # how many problems exhibit this
+    frequency: int = Field(ge=1)
     root_cause_hypothesis: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)
+    # Provenance — aggregated from constituent problems
+    source_record_ids: list[str] = Field(default_factory=list)
+    upstream_sources: list[str] = Field(default_factory=list)
+    agent_ideas: list[str] = Field(default_factory=list)
 
 
 class ThemeSummary(BaseModel):
     """High-level grouping of patterns. Used by Hypothesis Generator."""
-
-    model_config = {"strict": True}
 
     theme_id: str = Field(min_length=1)
     name: str = Field(min_length=1, max_length=120)

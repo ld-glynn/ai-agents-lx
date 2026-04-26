@@ -1,10 +1,10 @@
-from __future__ import annotations
 """Work log schemas — tracking ongoing agent activity.
 
 Each deployed agent accumulates a work log over its lifetime.
 Each entry represents one invocation: what triggered it, what
 the agent did, and what it produced.
 """
+from __future__ import annotations
 
 from datetime import datetime
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Evaluation gate — decides whether a candidate agent gets deployed.
 
 Two-stage gate (from elliot-eval):
@@ -10,6 +8,7 @@ Two-stage gate (from elliot-eval):
 
 The Hiring Manager calls screen_candidate() before adding an agent to the roster.
 """
+from __future__ import annotations
 
 import sys
 from dataclasses import dataclass

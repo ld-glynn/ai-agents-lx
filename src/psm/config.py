@@ -3,6 +3,8 @@
 from pathlib import Path
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
 
 def _find_project_root() -> Path:
     """Walk up from this file to find the pyproject.toml."""
@@ -11,6 +13,12 @@ def _find_project_root() -> Path:
         if (parent / "pyproject.toml").exists():
             return parent
     return current
+
+
+# Load .env from the project root so ANTHROPIC_API_KEY, WISDOM_API_*, etc. are
+# available to every entry point (CLI, server, tests) without manual exports.
+# override=False means real environment variables still win over the file.
+load_dotenv(_find_project_root() / ".env", override=False)
 
 
 @dataclass(frozen=True)
@@ -28,6 +36,7 @@ class Settings:
     hypotheses_path: Path
     solution_map_path: Path
     problems_csv_path: Path
+    discovered_problems_path: Path
 
     # Integration paths
     mock_data_dir: Path
@@ -44,9 +53,11 @@ class Settings:
     run_history_path: Path
     pipeline_config_path: Path
 
-    # Deployment & work logs
+    # Deployment, work logs & trials
     deployment_specs_path: Path
     work_logs_dir: Path
+    trials_path: Path
+    briefs_path: Path
 
     @classmethod
     def default(cls) -> "Settings":
@@ -65,6 +76,7 @@ class Settings:
             hypotheses_path=data / "hypotheses.json",
             solution_map_path=data / "solution_map.json",
             problems_csv_path=data / "input" / "problems.csv",
+            discovered_problems_path=data / "discovered_problems.json",
             # Integrations
             mock_data_dir=data / "mock",
             ingestion_path=data / "ingestion.json",
@@ -80,6 +92,8 @@ class Settings:
             # Deployment & work logs
             deployment_specs_path=data / "deployment_specs.json",
             work_logs_dir=data / "work_logs",
+            trials_path=data / "trials.json",
+            briefs_path=data / "briefs.json",
         )
 
 

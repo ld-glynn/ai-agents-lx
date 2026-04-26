@@ -1,0 +1,23 @@
+[
+  {
+    "id": "kg-theme-onboarding",
+    "title": "Engineering onboarding friction",
+    "summary": "Multiple teams report new hires taking 2+ weeks to ship first PR due to scattered docs, broken local setup scripts, and unclear ownership of the dev environment playbook.",
+    "entity_type": "Theme",
+    "relevance_score": 0.91
+  },
+  {
+    "id": "kg-feedback-webhooks",
+    "title": "Webhook reliability under load",
+    "summary": "Customer success highlighted recurring P1s: webhook delivery delays and drops during peak traffic; root cause often traced to retry policy gaps and missing dead-letter visibility.",
+    "entity_type": "Feedback",
+    "relevance_score": 0.87
+  },
+  {
+    "id": "kg-theme-docs",
+    "title": "API documentation accuracy",
+    "summary": "Sales and solutions engineers cite outdated API examples and missing error codes as a top reason for longer implementation cycles and evaluation risk.",
+    "entity_type": "Theme",
+    "relevance_score": 0.84
+  }
+]

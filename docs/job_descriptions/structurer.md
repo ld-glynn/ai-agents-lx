@@ -26,6 +26,8 @@ Return a JSON array of objects, each with:
 - `date_reported`: ISO date string from the source
 - `domain`: one of: process, tooling, communication, knowledge, infrastructure, people, strategy, customer, other
 - `tags`: comma-separated lowercase tags
+- `source_record_ids`: array of `record_id` values from the input records that contributed to this problem
+- `evidence`: 1-2 sentence explanation of WHY this qualifies as a problem — what signals in the source data led you to extract it (e.g., "Multiple Gong calls mention 15% webhook message loss during peak hours, and Slack #incidents confirms repeated P1 escalations")
 
 ## Rules
 

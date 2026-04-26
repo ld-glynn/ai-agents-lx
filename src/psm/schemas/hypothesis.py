@@ -1,9 +1,9 @@
-from __future__ import annotations
 """Hypothesis schemas — output of the Hypothesis Generator.
 
 Each hypothesis is a testable "If we X, then Y, because Z" statement
 linked to a pattern.
 """
+from __future__ import annotations
 
 from enum import Enum
 
@@ -34,8 +34,6 @@ class Hypothesis(BaseModel):
     - confidence > 0.8 without assumptions → OVERCONFIDENT
     - effort_estimate is HIGH but no assumptions listed → ASSUMPTIONS_MISSING
     """
-
-    model_config = {"strict": True}
 
     hypothesis_id: str = Field(min_length=1)
     pattern_id: str = Field(min_length=1)

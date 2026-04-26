@@ -5,3 +5,7 @@ __pycache__/
 dist/
 *.egg-info/
 .venv/
+.next/
+data/*.json
+data/history/
+!data/capability_inventory.json

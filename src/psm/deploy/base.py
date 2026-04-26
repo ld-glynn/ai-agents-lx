@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 """Base deployment adapter interface.
 
 Each adapter translates a DeploymentSpec into a specific runtime.
 The adapter handles: provisioning, configuration, and teardown.
 """
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 

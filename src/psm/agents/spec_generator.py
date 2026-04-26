@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Spec Generator — Stage 5: Produce deployment specifications.
 
 Takes screened AgentNewHire candidates and generates DeploymentSpec
@@ -8,9 +6,9 @@ blueprints describing how each agent should be deployed as a persistent worker.
 The specs are deployment-target agnostic — they describe what the agent does,
 not where it runs. A DeploymentAdapter later translates specs into runtime config.
 """
+from __future__ import annotations
 
 import sys
-from datetime import datetime
 
 from psm.schemas.agent import AgentNewHire
 from psm.schemas.pattern import Pattern

@@ -1,15 +1,13 @@
-from __future__ import annotations
-
 """Solvability Evaluator — Stage 2.5: Filter patterns before hypothesis generation.
 
 Sits between Pattern Analyzer (S2) and Hypothesis Generator (S3).
 Evaluates each pattern against the capability inventory and historical outcomes
 to decide: pass (proceed), flag (human review), or drop (exclude).
 """
+from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
 
 from psm.schemas.pattern import Pattern
 from psm.schemas.solvability import (

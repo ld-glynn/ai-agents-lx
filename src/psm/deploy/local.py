@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 """Local deployment adapter — agents run via psm invoke / API calls.
 
 This is the default adapter. It doesn't provision external infrastructure.
 Instead, agents are invoked on-demand through the CLI or API server.
 The "deployment" is just marking the spec as deployed in the data store.
 """
+from __future__ import annotations
 
 import sys
 

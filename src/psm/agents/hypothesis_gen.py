@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """Hypothesis Generator agent — proposes testable solutions for patterns."""
+from __future__ import annotations
 
 import json
 
@@ -8,12 +7,17 @@ from anthropic import Anthropic
 
 from psm.schemas.pattern import Pattern, ThemeSummary
 from psm.schemas.hypothesis import Hypothesis
-from psm.tools.context_loader import load_job_description
+from psm.tools.context_loader import load_job_description, load_onboarding
+from psm.tools.data_store import store
 
 
 def build_system_prompt() -> str:
     job_desc = load_job_description("hypothesis_generator")
+    onboarding = load_onboarding()
     return f"""{job_desc}
+
+## User Context
+{onboarding}
 
 You will receive patterns and themes as JSON. For each pattern, propose 1-3 testable hypotheses.
 Return a JSON array of Hypothesis objects. Nothing else — no markdown, no explanation."""
@@ -43,17 +47,31 @@ def run_hypothesis_generator(
         if parts:
             config_instructions = "\n\nAdditional constraints:\n" + "\n".join(f"- {p}" for p in parts)
 
-    user_content = json.dumps(
-        {
-            "patterns": [p.model_dump(mode="json") for p in patterns],
-            "themes": [t.model_dump(mode="json") for t in themes],
-        },
-        indent=2,
-    )
+    # Collect agent_ideas from discovered problems for each pattern
+    discovered = store.read_discovered_problems()
+    problem_lookup = {p.id: p for p in discovered}
+    agent_ideas_by_pattern: dict[str, list[str]] = {}
+    for pat in patterns:
+        ideas = []
+        for pid in pat.problem_ids:
+            prob = problem_lookup.get(pid)
+            if prob and prob.agent_idea:
+                ideas.append(prob.agent_idea)
+        if ideas:
+            agent_ideas_by_pattern[pat.pattern_id] = ideas
+
+    payload: dict = {
+        "patterns": [p.model_dump(mode="json") for p in patterns],
+        "themes": [t.model_dump(mode="json") for t in themes],
+    }
+    if agent_ideas_by_pattern:
+        payload["agent_ideas_by_pattern"] = agent_ideas_by_pattern
+
+    user_content = json.dumps(payload, indent=2)
 
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=16384,
         system=build_system_prompt() + config_instructions,
         messages=[{"role": "user", "content": user_content}],
     )
@@ -65,12 +83,13 @@ def run_hypothesis_generator(
     raw = json.loads(text)
     hypotheses = [Hypothesis.model_validate(h) for h in raw]
 
-    # Validate referential integrity
+    # Clean referential integrity: drop hypotheses with invalid pattern refs
     pattern_ids = {p.pattern_id for p in patterns}
+    valid = []
     for hyp in hypotheses:
         if hyp.pattern_id not in pattern_ids:
-            raise ValueError(
-                f"Hypothesis {hyp.hypothesis_id} references non-existent pattern: {hyp.pattern_id}"
-            )
+            print(f"  [hypothesis_gen] Warning: {hyp.hypothesis_id} references unknown pattern {hyp.pattern_id} — skipping")
+        else:
+            valid.append(hyp)
 
-    return hypotheses
+    return valid

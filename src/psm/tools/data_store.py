@@ -1,18 +1,18 @@
-from __future__ import annotations
 """JSON data store with Pydantic validation.
 
 Every write is validated against schemas before persisting.
 This is the shared state layer between all agents.
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import TypeVar, Type
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from psm.config import settings
-from psm.schemas.problem import CatalogEntry
+from psm.schemas.problem import RawProblem, CatalogEntry
 from psm.schemas.pattern import Pattern, ThemeSummary
 from psm.schemas.hypothesis import Hypothesis
 from psm.schemas.solution import SolutionMapping, SolverOutput
@@ -23,6 +23,8 @@ from psm.schemas.run_history import RunRecord
 from psm.schemas.pipeline_config import PipelineConfig
 from psm.schemas.deployment import DeploymentSpec
 from psm.schemas.work_log import WorkLogEntry, WorkLog
+from psm.schemas.trial import Trial
+from psm.schemas.brief import Brief
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -34,7 +36,11 @@ class DataStore:
         if not path.exists():
             return []
         raw = json.loads(path.read_text())
-        return [model.model_validate(item) for item in raw]
+        # strict=False so JSON-serialized enums (strings) and datetimes (ISO
+        # strings) re-coerce on read. The stored data was already validated
+        # on write, so strict mode is inappropriate here — it would only fire
+        # on our own round-trips of fields like SourceType and datetime.
+        return [model.model_validate(item, strict=False) for item in raw]
 
     def _write_list(self, path: Path, items: list[T]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -55,6 +61,18 @@ class DataStore:
         existing_ids = {e.problem_id for e in existing}
         new = [e for e in entries if e.problem_id not in existing_ids]
         self._write_list(settings.catalog_path, existing + new)
+        return len(new)
+
+    # --- Discovered Problems (from Find Problems / sync) ---
+
+    def read_discovered_problems(self) -> list[RawProblem]:
+        return self._read_list(settings.discovered_problems_path, RawProblem)
+
+    def append_discovered_problems(self, problems: list[RawProblem]) -> int:
+        existing = self.read_discovered_problems()
+        existing_ids = {p.id for p in existing}
+        new = [p for p in problems if p.id not in existing_ids]
+        self._write_list(settings.discovered_problems_path, existing + new)
         return len(new)
 
     # --- Patterns ---
@@ -351,6 +369,55 @@ class DataStore:
                     last_output_at=next((e.completed_at for e in reversed(entries) if e.completed_at), None),
                 ))
         return logs
+
+
+    # --- Briefs ---
+
+    def read_briefs(self) -> list[Brief]:
+        return self._read_list(settings.briefs_path, Brief)
+
+    def get_brief(self, entity_type: str, entity_id: str) -> Brief | None:
+        return next(
+            (b for b in self.read_briefs() if b.entity_type == entity_type and b.entity_id == entity_id),
+            None,
+        )
+
+    def save_brief(self, brief: Brief) -> None:
+        briefs = [b for b in self.read_briefs() if not (b.entity_type == brief.entity_type and b.entity_id == brief.entity_id)]
+        briefs.append(brief)
+        self._write_list(settings.briefs_path, briefs)
+
+    # --- Trials ---
+
+    def read_trials(self) -> list[Trial]:
+        return self._read_list(settings.trials_path, Trial)
+
+    def append_trial(self, trial: Trial) -> None:
+        trials = self.read_trials()
+        trials.append(trial)
+        self._write_list(settings.trials_path, trials)
+
+    def get_trial(self, trial_id: str) -> Trial | None:
+        return next((t for t in self.read_trials() if t.trial_id == trial_id), None)
+
+    def get_trial_for_agent(self, agent_id: str) -> Trial | None:
+        trials = self.read_trials()
+        active = [t for t in trials if t.agent_id == agent_id and t.status.value in ("setup", "active", "evaluating")]
+        if active:
+            return active[0]
+        completed = [t for t in trials if t.agent_id == agent_id and t.status.value == "completed"]
+        return completed[-1] if completed else None
+
+    def update_trial(self, trial_id: str, updates: dict) -> Trial | None:
+        trials = self.read_trials()
+        for i, t in enumerate(trials):
+            if t.trial_id == trial_id:
+                merged = t.model_dump()
+                merged.update(updates)
+                trials[i] = Trial.model_validate(merged, strict=False)
+                self._write_list(settings.trials_path, trials)
+                return trials[i]
+        return None
 
 
 # Module-level singleton
