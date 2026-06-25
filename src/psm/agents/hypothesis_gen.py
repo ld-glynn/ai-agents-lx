@@ -26,7 +26,7 @@ Return a JSON array of Hypothesis objects. Nothing else — no markdown, no expl
 def run_hypothesis_generator(
     patterns: list[Pattern],
     themes: list[ThemeSummary],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
     config: dict | None = None,
 ) -> list[Hypothesis]:
     """Generate hypotheses for identified patterns.

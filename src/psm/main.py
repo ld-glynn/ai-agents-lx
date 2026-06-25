@@ -372,12 +372,12 @@ def cli() -> None:
     )
     run_parser.add_argument(
         "--model",
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-6",
         help="Model for Tier 1 engine agents",
     )
     run_parser.add_argument(
         "--solver-model",
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-6",
         help="Model for Tier 2 new hire skill execution",
     )
     run_parser.add_argument(
@@ -412,7 +412,7 @@ def cli() -> None:
     )
     eval_parser.add_argument(
         "--model",
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-6",
         help="Model for evaluation runs",
     )
     eval_parser.set_defaults(func=cmd_eval)
@@ -420,7 +420,7 @@ def cli() -> None:
     # psm deploy
     deploy_parser = sub.add_parser("deploy", help="Deploy an approved agent")
     deploy_parser.add_argument("agent_id", help="Agent ID to deploy")
-    deploy_parser.add_argument("--model", default="claude-sonnet-4-20250514")
+    deploy_parser.add_argument("--model", default="claude-sonnet-4-6")
     deploy_parser.set_defaults(func=cmd_deploy)
 
     # psm invoke
@@ -428,7 +428,7 @@ def cli() -> None:
     invoke_parser.add_argument("agent_id", help="Agent ID to invoke")
     invoke_parser.add_argument("--trigger", choices=["manual", "scheduled", "webhook", "feedback", "api_call"], default="manual")
     invoke_parser.add_argument("--detail", default=None, help="Trigger detail message")
-    invoke_parser.add_argument("--model", default="claude-sonnet-4-20250514")
+    invoke_parser.add_argument("--model", default="claude-sonnet-4-6")
     invoke_parser.set_defaults(func=cmd_invoke)
 
     # psm agents
@@ -446,7 +446,7 @@ def cli() -> None:
 
     # psm eval-solvability
     solv_parser = sub.add_parser("eval-solvability", help="Run solvability evaluation on patterns")
-    solv_parser.add_argument("--model", default="claude-sonnet-4-20250514", help="Model for evaluator")
+    solv_parser.add_argument("--model", default="claude-sonnet-4-6", help="Model for evaluator")
     solv_parser.set_defaults(func=cmd_eval_solvability)
 
     # psm record-outcome
@@ -473,7 +473,7 @@ def cli() -> None:
     )
     sync_parser.add_argument(
         "--model",
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-4-6",
         help="Model for structurer agent",
     )
     sync_parser.set_defaults(func=cmd_sync)

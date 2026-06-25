@@ -9,3 +9,4 @@ dist/
 data/*.json
 data/history/
 !data/capability_inventory.json
+psm-dashboard/

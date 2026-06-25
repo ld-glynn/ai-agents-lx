@@ -74,7 +74,7 @@ class DeploymentSpec(BaseModel):
     agent_name: str = Field(min_length=1)
     agent_title: str = Field(min_length=1)
     persona: str = Field(min_length=10)
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
 
     # What this agent owns
     pattern_id: str = Field(min_length=1)

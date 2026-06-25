@@ -58,7 +58,7 @@ def reverse_analyze(
     existing_patterns: list[Pattern],
     existing_hypotheses: list[Hypothesis],
     existing_catalog: list[CatalogEntry],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> dict[str, Any]:
     """Reverse-analyze an externally-built agent to generate PSM entities.
 

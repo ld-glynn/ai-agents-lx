@@ -110,7 +110,7 @@ def generate_brief(
     entity_type: str,
     entity_id: str,
     context: dict[str, Any],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> Brief:
     """Generate an executive brief for a pipeline entity.
 

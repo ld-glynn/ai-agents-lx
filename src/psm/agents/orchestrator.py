@@ -71,8 +71,8 @@ _STAGE_ORDER = ["catalog", "patterns", "solvability", "hypotheses", "hire", "spe
 def run_pipeline(
     stage: str | None = None,
     start_stage: str | None = None,
-    model: str = "claude-sonnet-4-20250514",
-    solver_model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
+    solver_model: str = "claude-sonnet-4-6",
     with_integrations: bool = False,
     skip_solvability: bool = False,
     config: PipelineConfig | None = None,
@@ -194,7 +194,7 @@ def run_pipeline(
 
         # Propagate provenance from raw problems to catalog entries.
         # Match by ID first, then fall back to title matching (the cataloger
-        # may assign new IDs like P-001 while raw problems have INT-wisdom-001).
+        # may assign new IDs like P-001 while raw problems have INT-GLEAN-001).
         raw_by_id = {p.id: p for p in raw_problems}
         raw_by_title = {}
         for p in raw_problems:

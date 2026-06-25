@@ -27,7 +27,7 @@ class ExtractedProblem:
 def structure_records(
     records: list[IngestionRecord],
     *,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> list[ExtractedProblem]:
     """Extract problem statements from raw ingestion records.
 
@@ -130,7 +130,7 @@ def _structure_heuristic(records: list[IngestionRecord]) -> list[ExtractedProble
                 date_reported=date_str,
                 domain=domain,
                 tags=source_label,
-                # Provenance from Wisdom enrichment
+                # Provenance from integration enrichment (empty for plain search sources)
                 agent_idea=agent_idea or None,
                 synthesis=synthesis or None,
                 evidence=" ".join(evidence_parts),
@@ -162,6 +162,9 @@ def _structure_with_llm(
     client = anthropic.Anthropic()
     job_desc = load_job_description("structurer")
     all_results: list[ExtractedProblem] = []
+    # Track assigned IDs across batches — the LLM restarts numbering per batch,
+    # so without this two batches collide (e.g. both emit INT-glean-001).
+    seen_ids: set[str] = set()
 
     for batch_start in range(0, len(records), _STRUCTURER_BATCH_SIZE):
         batch = records[batch_start:batch_start + _STRUCTURER_BATCH_SIZE]
@@ -198,9 +201,51 @@ def _structure_with_llm(
             print(f"  [structurer] Batch {batch_num} JSON parse failed ({e}), skipping")
             continue
 
-        for p in raw_problems_data:
-            source_record_ids = p.pop("source_record_ids", [])
+        batch_by_id = {r.record_id: r for r in batch}
+        for idx, p in enumerate(raw_problems_data):
+            source_record_ids = p.pop("source_record_ids", []) or []
             evidence = p.pop("evidence", "")
+
+            # Provenance fallback: the LLM frequently omits source_record_ids.
+            # When extraction is 1:1 with the batch (the common case — one
+            # document yields one problem), map positionally so we never lose
+            # the link back to the source record.
+            if not source_record_ids and len(raw_problems_data) == len(batch):
+                source_record_ids = [batch[idx].record_id]
+
+            # Derive upstream_sources (datasource provenance) from the
+            # originating ingestion records, deduped, preserving order.
+            upstream: list[str] = []
+            for rid in source_record_ids:
+                rec = batch_by_id.get(rid)
+                if rec:
+                    for s in (rec.metadata or {}).get("upstream_sources", []):
+                        if s not in upstream:
+                            upstream.append(s)
+
+            # Ensure a unique, stable ID. Keep the LLM's id when it's unique;
+            # on a collision or missing id, derive one from the source record
+            # (guaranteed unique) so problems from later batches don't clobber
+            # earlier ones when persisted (append dedupes by id).
+            pid = (p.get("id") or "").strip()
+            if not pid or pid in seen_ids:
+                base = source_record_ids[0] if source_record_ids else f"{batch[idx].source.value}-{batch_start + idx + 1:03d}"
+                pid = f"INT-{base}"
+                suffix = 2
+                while pid in seen_ids:
+                    pid = f"INT-{base}-{suffix}"
+                    suffix += 1
+            seen_ids.add(pid)
+            p["id"] = pid
+
+            # Inject provenance into the dict so it survives onto the saved
+            # RawProblem (the wrapper alone is dropped when problems persist).
+            p["source_record_ids"] = source_record_ids
+            if upstream:
+                p["upstream_sources"] = upstream
+            if evidence:
+                p["evidence"] = evidence
+
             try:
                 problem = RawProblem.model_validate(p)
                 all_results.append(ExtractedProblem(

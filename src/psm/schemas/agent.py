@@ -156,7 +156,7 @@ class AgentNewHire(BaseModel):
     # updated Hiring Manager should always have at least one.
     job_functions: list[JobFunction] = Field(default_factory=list)
     assigned_to_role: str | None = None
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
     created_at: datetime = Field(default_factory=datetime.now)
 
     # Lifecycle

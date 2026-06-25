@@ -15,7 +15,7 @@ def _find_project_root() -> Path:
     return current
 
 
-# Load .env from the project root so ANTHROPIC_API_KEY, WISDOM_API_*, etc. are
+# Load .env from the project root so ANTHROPIC_API_KEY, GLEAN_*, etc. are
 # available to every entry point (CLI, server, tests) without manual exports.
 # override=False means real environment variables still win over the file.
 load_dotenv(_find_project_root() / ".env", override=False)

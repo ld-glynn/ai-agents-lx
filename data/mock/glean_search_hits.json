@@ -1,0 +1,169 @@
+{
+  "_comment": "Real LaunchDarkly Glean search results captured via the Glean MCP on 2026-06-25 (experimentation problem sweep across zendesk/gong/confluence). Shape mirrors the REST /search response so one parser serves mock + live.",
+  "results": [
+    {
+      "document": {
+        "id": "zendesk-116803",
+        "datasource": "zendesk",
+        "docType": "ticket",
+        "title": "Experiment is live but shows 0 exposures / data in UI",
+        "url": "https://launchdarklysupport.zendesk.com/agent/tickets/116803",
+        "metadata": { "datasource": "zendesk", "createTime": "2026-03-17T18:38:16Z", "updateTime": "2026-04-08T21:09:19Z", "author": { "name": "James Marah" } }
+      },
+      "title": "Experiment is live but shows 0 exposures / data in UI",
+      "url": "https://launchdarklysupport.zendesk.com/agent/tickets/116803",
+      "matchingFilters": { "app": "zendesk", "customer": "Purina (Nestle)", "productcategory": "Experimentation", "experimentation": "Interpreting Results", "supporttierticket": "Enterprise" },
+      "snippets": [
+        { "text": "We launched a new experiment yesterday and the Results page still shows 0 exposures and no metric conversions. The flag was previously used in another experiment. Snowflake shows reason_detail 'inExperiment = true' but the experiment iteration ID is blank, and Live Events show stale flag versions." },
+        { "text": "Engineering confirmed this is a bug — a regression introduced in a recent update to experimentation functionality. The identical experiment setup worked correctly in staging." }
+      ]
+    },
+    {
+      "document": {
+        "id": "zendesk-113961",
+        "datasource": "zendesk",
+        "docType": "ticket",
+        "title": "0 exposure for experiment — flag is in experiment but getting 0 exposure",
+        "url": "https://launchdarklysupport.zendesk.com/agent/tickets/113961",
+        "metadata": { "datasource": "zendesk", "createTime": "2026-02-11T17:04:18Z", "updateTime": "2026-03-22T20:16:32Z", "author": { "name": "James Marah" } }
+      },
+      "title": "0 exposure for experiment — flag is in experiment but getting 0 exposure",
+      "url": "https://launchdarklysupport.zendesk.com/agent/tickets/113961",
+      "matchingFilters": { "app": "zendesk", "customer": "Arlo", "productcategory": "Experimentation", "experimentation": "Conversions or Impressions not appearing", "supporttierticket": "Enterprise" },
+      "snippets": [
+        { "text": "Created this experiment and it has 0 exposure. Are you seeing feature events for this flag in Live events, and does the event detail show inExperiment: true? Likely the SDK isn't sending experiment events — possibly page redirects after variation() without an explicit flush()." }
+      ]
+    },
+    {
+      "document": {
+        "id": "zendesk-39283207608731",
+        "datasource": "zendesk",
+        "docType": "article",
+        "title": "Troubleshooting experimentation metrics from Segment (Twilio) not registering conversions",
+        "url": "https://support.launchdarkly.com/hc/en-us/articles/39283207608731",
+        "metadata": { "datasource": "zendesk", "createTime": "2025-07-24T03:45:45Z", "updateTime": "2025-08-08T20:25:04Z", "author": { "name": "Alfred Tong" } }
+      },
+      "title": "Troubleshooting experimentation metrics from Segment (Twilio) not registering conversions",
+      "url": "https://support.launchdarkly.com/hc/en-us/articles/39283207608731",
+      "matchingFilters": { "app": "zendesk", "brand": "LaunchDarkly Support", "type": "article" },
+      "snippets": [
+        { "text": "The context is successfully evaluated by the experimentation flag and metric events are visible in the UI, but conversion counts are not reflected in the experiment results. Common cause: mismatch in randomization unit between the experiment and the metric, or incorrect Segment destination mapping for the context kind." }
+      ]
+    },
+    {
+      "document": {
+        "id": "zendesk-21910914554395",
+        "datasource": "zendesk",
+        "docType": "article",
+        "title": "Error 'This metric has never received an event for this iteration'",
+        "url": "https://support.launchdarkly.com/hc/en-us/articles/21910914554395",
+        "metadata": { "datasource": "zendesk", "createTime": "2024-01-09T22:08:54Z", "updateTime": "2024-12-06T00:11:21Z", "author": { "name": "Kevin Li" } }
+      },
+      "title": "Error 'This metric has never received an event for this iteration'",
+      "url": "https://support.launchdarkly.com/hc/en-us/articles/21910914554395",
+      "matchingFilters": { "app": "zendesk", "brand": "LaunchDarkly Support", "type": "article" },
+      "snippets": [
+        { "text": "After starting an iteration the Results page shows 'This metric has never received an event for this iteration.' LaunchDarkly has not received a metric event with a context key matching a feature event. If using a JavaScript SDK, ad-blockers or Do Not Track can block the events needed to register the metric." }
+      ]
+    },
+    {
+      "document": {
+        "id": "zendesk-16743658874395",
+        "datasource": "zendesk",
+        "docType": "article",
+        "title": "Troubleshooting SRM errors with experiments",
+        "url": "https://support.launchdarkly.com/hc/en-us/articles/16743658874395",
+        "metadata": { "datasource": "zendesk", "createTime": "2023-06-28T18:12:43Z", "updateTime": "2026-04-14T18:37:30Z", "author": { "name": "Kevin Li" } }
+      },
+      "title": "Troubleshooting SRM errors with experiments",
+      "url": "https://support.launchdarkly.com/hc/en-us/articles/16743658874395",
+      "matchingFilters": { "app": "zendesk", "brand": "LaunchDarkly Support", "type": "article" },
+      "snippets": [
+        { "text": "The health error 'Sample mismatch ratio detected. These results are not valid.' means LaunchDarkly detected a mismatch between audience allocation and observed exposures. Most commonly the randomization method is incorrect, or a shared anonymous context key causes multiple users to be treated as a single context, skewing variation exposure." }
+      ]
+    },
+    {
+      "document": {
+        "id": "confluence-4791795789",
+        "datasource": "confluence",
+        "docType": "page",
+        "title": "Sample Ratio Mismatch — Root Causes, Frequency, and Diagnostic Tiers",
+        "url": "https://launchdarkly.atlassian.net/wiki/spaces/~712020936/pages/4791795789",
+        "metadata": { "datasource": "confluence", "createTime": "2026-04-21T22:23:34Z", "updateTime": "2026-04-21T23:51:17Z", "author": { "name": "Sruthy Kumar" } }
+      },
+      "title": "Sample Ratio Mismatch — Root Causes, Frequency, and Diagnostic Tiers",
+      "url": "https://launchdarkly.atlassian.net/wiki/spaces/~712020936/pages/4791795789",
+      "matchingFilters": { "app": "confluence", "department": "technology", "space": "Sruthy Kumar" },
+      "snippets": [
+        { "text": "~50% of SRM escalations are Tier 1 (data already in LD, just not surfaced in the UI). Self Financial: experiments starting 90/10 then restarted 50/50 show a big bias toward control that takes a long time to converge. Customer using Fastly edge bucketed users into variants too early, causing SRM." },
+        { "text": "Active SRM subthemes in customer feedback: 'Persistent Sample Ratio Mismatch Warnings', 'SRM Persists Across Unchanged Iterations', 'General Help With SRM', and 'Add Exposure Imbalance Notifications' (improvement request). Genuine Parts / Motion: persistent SRM across many experiments, unresolved." }
+      ]
+    },
+    {
+      "document": {
+        "id": "confluence-metrics-pain-points",
+        "datasource": "confluence",
+        "docType": "page",
+        "title": "Metrics - User & Customer Pain Points",
+        "url": "https://launchdarkly.atlassian.net/wiki/spaces/~712020936/pages/4711153817",
+        "metadata": { "datasource": "confluence", "createTime": "2026-04-03T15:44:21Z", "updateTime": "2026-04-07T23:43:19Z", "author": { "name": "Sruthy Kumar" } }
+      },
+      "title": "Metrics - User & Customer Pain Points",
+      "url": "https://launchdarkly.atlassian.net/wiki/spaces/~712020936/pages/4711153817",
+      "matchingFilters": { "app": "confluence", "department": "technology", "space": "Sruthy Kumar" },
+      "snippets": [
+        { "text": "Top pain points: provide experiment analysis enablement (86), expand data warehouse coverage (59), difficulty diagnosing persistent sample ratio mismatch (34), data integrity issues skew results (32). 7 of the top 10 pain points cluster in Stage 5 (Experiments)." },
+        { "text": "We are losing about 50% of our experiment data by the time it reaches Databricks — a custom backend identifier (application_id) is missing from exported contexts, so we cannot join LaunchDarkly data with our internal datasets." }
+      ]
+    },
+    {
+      "document": {
+        "id": "gong-8760875830212624416",
+        "datasource": "gong",
+        "docType": "call",
+        "title": "LaunchDarkly + Rakuten Experimentation",
+        "url": "https://us-13341.app.gong.io/call?id=8760875830212624416",
+        "metadata": { "datasource": "gong", "createTime": "2026-03-11T15:31:20Z", "updateTime": "2026-03-11T15:31:20Z", "author": { "name": "Tanner Ballard" } }
+      },
+      "title": "LaunchDarkly + Rakuten Experimentation",
+      "url": "https://us-13341.app.gong.io/call?id=8760875830212624416",
+      "matchingFilters": { "app": "gong", "account": "Rakuten Rewards, ShopStyle", "opportunity": "Rakuten - Sales", "type": "call" },
+      "snippets": [
+        { "text": "The customer can make only one variation call and is trying to solve a multi-flag setup with one experiment call — wants to fetch a parent feature flag and based on that make multiple calls. The platform limitation is that you can only attach an experiment to one flag at a time; parent/child flag relationships don't return child variations." }
+      ]
+    },
+    {
+      "document": {
+        "id": "gong-4708056327456910953",
+        "datasource": "gong",
+        "docType": "call",
+        "title": "VTEX / LaunchDarkly - Experimentation technical fit",
+        "url": "https://us-13341.app.gong.io/call?id=4708056327456910953",
+        "metadata": { "datasource": "gong", "createTime": "2026-03-12T15:31:03Z", "updateTime": "2026-03-12T15:31:03Z", "author": { "name": "Jake Evans" } }
+      },
+      "title": "VTEX / LaunchDarkly - Experimentation technical fit",
+      "url": "https://us-13341.app.gong.io/call?id=4708056327456910953",
+      "matchingFilters": { "app": "gong", "account": "VTEX", "opportunity": "VTEX - NB - Sales - 2026", "type": "call" },
+      "snippets": [
+        { "text": "Before-and-after analysis is the biggest challenge in experimentation for this customer. They want to attach metrics that LaunchDarkly automatically monitors as part of a guarded release — checkout percentage, page load time — but are unsure how to wire warehouse metrics into the analysis." }
+      ]
+    },
+    {
+      "document": {
+        "id": "confluence-4698210343",
+        "datasource": "confluence",
+        "docType": "page",
+        "title": "Blitz: Snowflake Warehouse Native Experimentation Setup Overhaul",
+        "url": "https://launchdarkly.atlassian.net/wiki/spaces/PD/pages/4698210343",
+        "metadata": { "datasource": "confluence", "createTime": "2026-03-31T05:29:24Z", "updateTime": "2026-04-09T11:05:43Z", "author": { "name": "Dhruv Rawat" } }
+      },
+      "title": "Blitz: Snowflake Warehouse Native Experimentation Setup Overhaul",
+      "url": "https://launchdarkly.atlassian.net/wiki/spaces/PD/pages/4698210343",
+      "matchingFilters": { "app": "confluence", "department": "technology", "space": "Product Delivery" },
+      "snippets": [
+        { "text": "The old Snowflake Warehouse Native Experimentation setup required customers to bounce between 3 interfaces — the LD UI, the Snowflake Marketplace, and a Snowflake Worksheet — installing a native app that added no real value. Customers found it confusing that an environment without Data Export configured silently does not show up in the dropdown." }
+      ]
+    }
+  ],
+  "hasMoreResults": true
+}
