@@ -32,7 +32,7 @@ class Domain(str, Enum):
 
 
 class RawProblem(BaseModel):
-    """Direct mapping from a CSV row or Wisdom discovery. Minimal validation."""
+    """Direct mapping from a CSV row or integration discovery. Minimal validation."""
 
     id: str = Field(min_length=1)
     title: str = Field(min_length=1)
@@ -41,7 +41,8 @@ class RawProblem(BaseModel):
     date_reported: str = Field(min_length=1)
     domain: str | None = None
     tags: str | None = None  # comma-separated from sheet
-    # Provenance fields from Wisdom enrichment (optional — absent for CSV imports)
+    # Provenance fields from integration enrichment (optional — absent for CSV
+    # imports; agent_idea/synthesis/source_counts stay empty for plain search sources)
     agent_idea: str | None = None
     synthesis: str | None = None
     evidence: str | None = None

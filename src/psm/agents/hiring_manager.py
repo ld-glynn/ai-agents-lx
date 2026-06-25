@@ -87,7 +87,7 @@ Return a JSON array of AgentNewHire objects. Nothing else — no markdown, no ex
 def run_hiring_manager(
     patterns: list[Pattern],
     hypotheses: list[Hypothesis],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
     config: dict | None = None,
 ) -> list[AgentNewHire]:
     """Create Agent New Hires — one per pattern, each with skills for their hypotheses.

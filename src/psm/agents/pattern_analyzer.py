@@ -25,7 +25,7 @@ Nothing else — no markdown, no explanation. Just the JSON object."""
 
 def run_pattern_analyzer(
     catalog: list[CatalogEntry],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
     config: dict | None = None,
 ) -> tuple[list[Pattern], list[ThemeSummary]]:
     """Analyze the catalog for patterns and themes.

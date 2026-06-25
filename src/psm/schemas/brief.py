@@ -17,4 +17,4 @@ class Brief(BaseModel):
     entity_id: str = Field(min_length=1)
     content: str = Field(min_length=1)  # Markdown narrative
     generated_at: datetime = Field(default_factory=datetime.now)
-    model_used: str = "claude-sonnet-4-20250514"
+    model_used: str = "claude-sonnet-4-6"

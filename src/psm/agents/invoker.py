@@ -27,7 +27,7 @@ def invoke_agent(
     trigger_type: TriggerType,
     trigger_detail: str,
     *,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> list[WorkLogEntry]:
     """Invoke a deployed agent to do work.
 
@@ -120,7 +120,7 @@ def invoke_agent(
     return entries
 
 
-def deploy_agent(spec_id: str, *, model: str = "claude-sonnet-4-20250514") -> dict:
+def deploy_agent(spec_id: str, *, model: str = "claude-sonnet-4-6") -> dict:
     """Deploy an approved agent and run its initial invocation.
 
     Transitions: approved -> deployed, then invokes the agent.

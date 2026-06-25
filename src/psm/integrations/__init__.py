@@ -4,13 +4,13 @@ from psm.integrations.base import IntegrationAdapter
 from psm.integrations.salesforce import SalesforceAdapter
 from psm.integrations.gong import GongAdapter
 from psm.integrations.slack import SlackAdapter
-from psm.integrations.wisdom import WisdomAdapter
+from psm.integrations.glean import GleanAdapter
 
 ADAPTERS = {
     "salesforce": SalesforceAdapter,
     "gong": GongAdapter,
     "slack": SlackAdapter,
-    "wisdom": WisdomAdapter,
+    "glean": GleanAdapter,
 }
 
 

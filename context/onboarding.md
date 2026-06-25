@@ -13,12 +13,14 @@ You are helping **Glyn Jordan**, a Product Specialist in Experimentation at Laun
 
 ## Data Sources
 
-Problems are discovered from the Enterpret Wisdom knowledge graph, which aggregates data from:
+Problems are discovered via Glean enterprise search, which indexes data across LaunchDarkly's connected apps:
 - **Gong**: Sales and CS call transcripts
-- **ZendeskSupport**: Customer support tickets
+- **Zendesk**: Customer support tickets
 - **Slack**: Internal channel messages
-- **G2**: Public product reviews
-- **Jira**: Engineering tickets (uploaded)
+- **Confluence**: Internal docs and analyses
+- **Jira**: Engineering tickets
+
+Unlike the previous Enterpret knowledge graph, Glean returns individual documents rather than pre-aggregated themes — recurrence and clustering are reconstructed downstream by the Cataloger and Pattern Analyzer.
 
 ## What Kinds of Agents Are Useful
 

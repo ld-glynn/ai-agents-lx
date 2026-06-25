@@ -35,8 +35,8 @@ app.add_middleware(
 class RunRequest(BaseModel):
     stage: Optional[str] = None
     start_stage: Optional[str] = None  # Skip stages before this one
-    model: str = "claude-sonnet-4-20250514"
-    solver_model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
+    solver_model: str = "claude-sonnet-4-6"
     with_integrations: bool = False
     skip_solvability: bool = False
     config: Optional[dict] = None
@@ -45,22 +45,15 @@ class RunRequest(BaseModel):
 class SyncRequest(BaseModel):
     source: str = "all"
     mock: bool = True
-    model: str = "claude-sonnet-4-20250514"
-    # Optional overrides when source is "wisdom" (Enterpret Knowledge Graph / MCP).
-    # wisdom_query accepts a single string OR a list of strings for multi-query sweeps;
-    # results across all queries are merged and deduped by entity id.
-    wisdom_query: Optional[Union[str, List[str]]] = None
-    wisdom_limit: Optional[int] = None
-    # When set, a Cypher query replaces the search_knowledge_graph flow for Wisdom.
-    wisdom_cypher: Optional[str] = None
-    # Record-first mode: time window in days and record limit
-    wisdom_days: Optional[int] = None
-    wisdom_record_limit: Optional[int] = None
-    # Scout parameters
-    scout_max_findings: Optional[int] = None
-    scout_max_tool_calls: Optional[int] = None
-    # Scan mode: "scout" (default), "deep" (record-first), "quick" (theme-first)
-    scan_mode: str = "scout"
+    model: str = "claude-sonnet-4-6"
+    # Optional overrides when source is "glean" (Glean enterprise search).
+    # glean_query accepts a single string OR a list of strings for multi-query
+    # sweeps; results across all queries are merged and deduped by document id.
+    glean_query: Optional[Union[str, List[str]]] = None
+    glean_limit: Optional[int] = None
+    # Restrict Glean search to a single connected app (e.g. "zendesk", "gong",
+    # "slack", "jira", "confluence"). None = search across everything indexed.
+    glean_datasource: Optional[str] = None
 
 
 # --- Endpoints ---
@@ -151,134 +144,21 @@ def sync_integrations(request: SyncRequest):
     from psm.agents.structurer import structure_records
 
     try:
-        # Scout mode: intelligent two-phase exploration (default)
-        if request.scan_mode == "scout" and request.source == "wisdom":
-            from psm.agents.scout import run_scout, ScoutConfig
-            from psm.schemas.problem import RawProblem
-
-            scout_config = ScoutConfig(
-                mock=request.mock,
-                max_findings=request.scout_max_findings or 30,
-                max_tool_calls=request.scout_max_tool_calls or 25,
-                focus_hint="Focus on experimentation-related problems: A/B testing, feature flags, metrics, rollouts, holdouts, experiment setup, variation management.",
-            )
-
-            result = run_scout(scout_config)
-            records = result.records
-            new_count = store.append_ingestion(records)
-
-            # Each Scout finding becomes a discovered problem with source_record_ids
-            raw_problems = []
-            for rec in records:
-                meta = rec.metadata or {}
-                title = rec.raw_text.split("\n")[0].replace("Title: ", "").strip()
-                summary_line = ""
-                for line in rec.raw_text.split("\n"):
-                    if line.startswith("Summary: "):
-                        summary_line = line.replace("Summary: ", "").strip()
-                        break
-                recurrence = meta.get("recurrence_evidence", "")
-                description = summary_line or title
-                if recurrence:
-                    description += f" Evidence: {recurrence}"
-
-                raw_problems.append(RawProblem(
-                    id=f"INT-{rec.record_id}",
-                    title=title,
-                    description=description,
-                    reported_by="Scout",
-                    date_reported=rec.ingested_at.isoformat() if rec.ingested_at else datetime.now().isoformat(),
-                    upstream_sources=meta.get("upstream_sources", []),
-                    source_record_ids=[rec.record_id],
-                    evidence=recurrence,
-                ))
-
-            saved = store.append_discovered_problems(raw_problems)
-
-            return {
-                "status": "completed",
-                "scan_mode": "scout",
-                "source_counts": {"wisdom": len(records)},
-                "total_records": len(records),
-                "new_records": new_count,
-                "problems_extracted": len(raw_problems),
-                "problems": [{"id": p.id, "title": p.title} for p in raw_problems],
-                "scout_trace": {
-                    "tool_calls_used": result.tool_calls_used,
-                    "findings_emitted": result.findings_emitted,
-                    "stop_cause": result.stop_cause,
-                    "finish_reason": result.finish_reason,
-                },
-            }
-
-        # Quick Scan: theme-first — pull Enterpret themes directly as patterns
-        if request.scan_mode == "quick" and request.source == "wisdom":
-            from psm.integrations.wisdom import WisdomAdapter
-            from psm.schemas.pattern import Pattern
-
-            adapter = WisdomAdapter(
-                mock=request.mock,
-                search_query=request.wisdom_query,
-                search_limit=request.wisdom_limit,
-                cypher_query=request.wisdom_cypher or (
-                    "MATCH (t:Theme) WHERE t.type = 'DEFAULT' "
-                    "RETURN t.record_id AS id, t.name AS title, t.display_name AS name, "
-                    "t.description AS description, t.category_enum AS category LIMIT 1000"
-                ),
-            )
-            records = adapter.fetch_records()
-            store.append_ingestion(records)
-
-            # Convert ingestion records directly to patterns
-            patterns = []
-            for i, rec in enumerate(records):
-                title = rec.raw_text.split("\n")[0].replace("Title: ", "").strip()
-                if not title:
-                    continue
-                meta = rec.metadata or {}
-                patterns.append(Pattern(
-                    pattern_id=f"QPAT-{i+1:03d}",
-                    name=title,
-                    description=meta.get("synthesis") or title,
-                    problem_ids=[rec.record_id],
-                    domains_affected=["customer"],
-                    frequency=meta.get("feedback_sample_count", 1),
-                    root_cause_hypothesis=None,
-                    confidence=0.7,
-                    upstream_sources=meta.get("upstream_sources", []),
-                    agent_ideas=[meta.get("agent_idea")] if meta.get("agent_idea") else [],
-                ))
-
-            existing_patterns = store.read_patterns()
-            existing_themes = store.read_themes()
-            store.write_patterns(existing_patterns + patterns, existing_themes)
-
-            return {
-                "status": "completed",
-                "scan_mode": "quick",
-                "source_counts": {"wisdom": len(records)},
-                "total_records": len(records),
-                "new_records": len(records),
-                "problems_extracted": 0,
-                "patterns_created": len(patterns),
-                "problems": [],
-                "message": f"Quick scan: {len(patterns)} themes imported as patterns. Run pipeline from Hypotheses to continue.",
-            }
-
-        # Deep Scan: record-first — full pipeline
+        # Resolve adapters. Glean accepts query/limit/datasource overrides; all
+        # other sources take no extra params. Every source then flows through the
+        # same Structurer → discovered_problems path — recurrence/clustering is
+        # handled downstream by the Cataloger → Pattern Analyzer.
         if request.source == "all":
             adapters = get_all_adapters(mock=request.mock)
-        elif request.source == "wisdom":
-            from psm.integrations.wisdom import WisdomAdapter
+        elif request.source == "glean":
+            from psm.integrations.glean import GleanAdapter
 
             adapters = [
-                WisdomAdapter(
+                GleanAdapter(
                     mock=request.mock,
-                    search_query=request.wisdom_query,
-                    search_limit=request.wisdom_limit,
-                    cypher_query=request.wisdom_cypher,
-                    days=request.wisdom_days,
-                    record_limit=request.wisdom_record_limit,
+                    search_query=request.glean_query,
+                    search_limit=request.glean_limit,
+                    datasources=[request.glean_datasource] if request.glean_datasource else None,
                 )
             ]
         else:
@@ -303,32 +183,9 @@ def sync_integrations(request: SyncRequest):
             new_records = [r for r in all_records if r.record_id not in existing_ids]
             new_count = store.append_ingestion(all_records)
 
-            if new_records and request.source == "wisdom" and request.scan_mode == "deep":
-                # Record-first: each record IS a problem — skip structurer, guarantee provenance
-                from psm.schemas.problem import RawProblem
-                raw_problems = []
-                for i, rec in enumerate(new_records):
-                    meta = rec.metadata or {}
-                    source_name = meta.get("source_name", "unknown")
-                    content = rec.raw_text.replace(f"[{source_name}] ", "", 1) if source_name else rec.raw_text
-                    title = content[:100].split(".")[0].strip() or f"Feedback {i+1}"
-                    raw_problems.append(RawProblem(
-                        id=f"INT-{rec.record_id}",
-                        title=title,
-                        description=content[:500],
-                        reported_by=source_name,
-                        date_reported=meta.get("record_timestamp", datetime.now().isoformat()),
-                        domain=None,
-                        tags=source_name.lower() if source_name else None,
-                        source_record_ids=[rec.record_id],
-                        upstream_sources=meta.get("upstream_sources", []),
-                        evidence=f"From {source_name} record {meta.get('origin_id', rec.record_id)}",
-                    ))
-                saved = store.append_discovered_problems(raw_problems)
-                print(f"  Saved {saved} discovered problems (record-first, all with source_record_ids)")
-                problems = [{"id": p.id, "title": p.title} for p in raw_problems]
-            elif new_records:
-                # Non-wisdom sources: use structurer as before
+            if new_records:
+                # Distill each raw record (ticket, call, doc, …) into a clean
+                # RawProblem via the Structurer.
                 extracted = structure_records(new_records, model=request.model)
                 if extracted:
                     saved = store.append_discovered_problems([ep.problem for ep in extracted])
@@ -362,7 +219,6 @@ def sync_integrations(request: SyncRequest):
 
         return {
             "status": "completed",
-            "scan_mode": "deep",
             "source_counts": source_counts,
             "total_records": len(all_records),
             "new_records": new_count,
@@ -375,7 +231,7 @@ def sync_integrations(request: SyncRequest):
 
 class ParseRequest(BaseModel):
     text: str
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
 
 
 @app.post("/api/parse")
@@ -646,7 +502,7 @@ def deploy_agent_endpoint(agent_id: str):
 class InvokeRequest(BaseModel):
     trigger_type: str = "manual"
     trigger_detail: str = "Manual invocation from dashboard"
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
 
 
 @app.post("/api/agents/{agent_id}/invoke")
@@ -822,7 +678,7 @@ class RegisterAnalyzeRequest(BaseModel):
     who_uses: str = ""
     data_sources: list[str] = []
     outputs: list[str] = []
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
 
 
 class RegisterConfirmRequest(BaseModel):

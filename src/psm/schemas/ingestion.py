@@ -18,6 +18,7 @@ class SourceType(str, Enum):
     CSV = "csv"
     MANUAL = "manual"
     WISDOM = "wisdom"  # Enterpret Knowledge Graph (MCP search_knowledge_graph)
+    GLEAN = "glean"  # Glean enterprise search (REST /search + /chat)
 
 
 class IngestionRecord(BaseModel):

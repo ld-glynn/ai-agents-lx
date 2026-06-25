@@ -24,7 +24,7 @@ Return a JSON array of SolutionMapping objects. Nothing else — no markdown, no
 
 def run_solver_router(
     hypotheses: list[Hypothesis],
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> list[SolutionMapping]:
     """Route hypotheses to solver types and team roles.
 
