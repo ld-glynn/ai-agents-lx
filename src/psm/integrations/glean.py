@@ -332,7 +332,13 @@ class GleanAdapter(IntegrationAdapter):
 
     def _fetch_live(self) -> list[IngestionRecord]:
         if not glean_configured():
-            return []
+            # Surface this loudly rather than returning [] — a silent empty
+            # result reads as "found nothing" when the real cause is missing
+            # credentials. The caller (/api/sync) turns this into a clear error.
+            raise RuntimeError(
+                "Glean is not configured. Set GLEAN_INSTANCE and GLEAN_API_TOKEN "
+                "in .env to search live, or enable Mock mode to use sample data."
+            )
         limit = self._limit()
         datasources = self._datasources or _DEFAULT_DATASOURCES
         by_id: dict[str, dict[str, Any]] = {}
